@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<package>
+
+  <name>rf2o_laser_odometry</name>
+  <version>1.0.0</version>
+  <description>
+    Estimation of 2D odometry based on planar laser scans. Useful for mobile robots with innacurate base odometry.
+    For full description of the algorithm, please refer to:
+    Planar Odometry from a Radial Laser Scanner. A Range Flow-based Approach. ICRA 2016
+    Available at: http://mapir.isa.uma.es/mapirwebsite/index.php/mapir-downloads/papers/217
+  </description>
+
+  <maintainer email="jgmonroy@uma.es">Javier G. Monroy</maintainer>
+  <author email="marianojt@uma.es"> Mariano Jaimez</author>
+  <author email="jgmonroy@uma.es"> Javier G. Monroy</author>
+  <license>GPL v3</license> 
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>nav_msgs</build_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>tf</build_depend>
+  <build_depend>cmake_modules</build_depend>   <!-- A common repository for CMake Modules which are not distributed with CMake but are commonly used by ROS packages. -->
+                                               <!-- https://github.com/ros/cmake_modules/blob/0.3-devel/README.md -->
+  <build_depend>mrpt</build_depend>            <!-- Depend on mrpt system pkgs: http://www.mrpt.org/ -->
+
+
+  <run_depend>nav_msgs</run_depend>
+  <run_depend>roscpp</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>std_msgs</run_depend>
+  <run_depend>tf</run_depend>
+  <run_depend>cmake_modules</run_depend>       <!-- For aditional dependencies such as Eigen -->
+  <run_depend>mrpt</run_depend>                <!-- Depend on mrpt system pkgs -->
+
+</package>

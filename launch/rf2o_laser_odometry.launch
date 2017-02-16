@@ -1,0 +1,19 @@
+<!-- 
+  This node presents a fast and precise method to estimate the planar motion of a lidar
+  from consecutive range scans. It is very useful for the estimation of the robot odometry from
+  2D laser range measurements.
+  
+  Requirements:
+  - 2D laser scan, publishing sensor_msgs::LaserScan
+  - TF transform from the laser to the robot base
+-->
+
+<launch>
+
+  <node pkg="rf2o_laser_odometry" type="rf2o_laser_odometry_node" name="rf2o_laser_odometry">
+    <param name="laser_scan_topic" value="/laser_scan"/>        <!-- topic where the lidar scans are being published -->
+    <param name="base_frame_id" value="/base_link"/>            <!-- frame_id (tf) of the mobile robot base. A tf transform from the laser_frame to the base_frame is mandatory -->
+    <param name="odom_frame_id" value="/odom" />                <!-- frame_id (tf) to publish the odometry estimations -->
+    <param name="freq" value="6.0"/>                            <!-- Execution frequency. See "Planar Odometry from a Radial Laser Scanner. A Range Flow-based Approach. ICRA'16"-->
+  </node>
+</launch>
