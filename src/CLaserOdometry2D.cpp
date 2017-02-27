@@ -80,7 +80,7 @@ void CLaserOdometry2D::Init()
     tf::StampedTransform transform;
     try
     {
-        tf_listener.lookupTransform("/base_link", last_scan.header.frame_id, ros::Time(0), transform);
+        tf_listener.lookupTransform(base_frame_id, last_scan.header.frame_id, ros::Time(0), transform);
     }
     catch (tf::TransformException &ex)
     {
@@ -918,7 +918,7 @@ void CLaserOdometry2D::PoseUpdate()
     tf::StampedTransform transform;
     try
     {
-        tf_listener.lookupTransform(last_scan.header.frame_id, "/base_link", ros::Time(0), transform);
+        tf_listener.lookupTransform(last_scan.header.frame_id, base_frame_id, ros::Time(0), transform);
     }
     catch (tf::TransformException &ex)
     {
@@ -978,8 +978,8 @@ void CLaserOdometry2D::PoseUpdate()
     //---------------------------------------
     geometry_msgs::TransformStamped odom_trans;
     odom_trans.header.stamp = ros::Time::now();
-    odom_trans.header.frame_id = odom_frame_id;
-    odom_trans.child_frame_id = base_frame_id;
+    odom_trans.header.frame_id = base_frame_id;
+    odom_trans.child_frame_id = odom_frame_id;
     odom_trans.transform.translation.x = robot_pose.x();
     odom_trans.transform.translation.y = robot_pose.y();
     odom_trans.transform.translation.z = 0.0;

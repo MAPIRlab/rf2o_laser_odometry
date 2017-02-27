@@ -16,7 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(cmake_modules REQUIRED)
-find_package(Eigen REQUIRED)
+find_package(Eigen3 REQUIRED)
 find_package(MRPT REQUIRED base obs maps slam)
 #include_directories(${MRPT_INCLUDE_DIRS})
 #MESSAGE( STATUS "MRPT_INCLUDE_DIRS: " ${MRPT_INCLUDE_DIRS})
@@ -38,7 +38,7 @@ catkin_package(
  INCLUDE_DIRS include
  LIBRARIES laser_odometry
  CATKIN_DEPENDS nav_msgs roscpp sensor_msgs std_msgs tf
- DEPENDS system_lib
+ #DEPENDS system_lib
 )
 
 ## Specify additional locations of header files
