@@ -61,24 +61,29 @@ public:
     void Init();
     void odometryCalculation();
 
-    std::string laser_scan_topic;
-    std::string base_frame_id;
-    std::string odom_frame_id;
-    double freq;
+    std::string         laser_scan_topic;
+    std::string         odom_topic;
+    bool                publish_tf;
+    std::string         base_frame_id;
+    std::string         odom_frame_id;
+    std::string         init_pose_from_topic;
+    double              freq;
 
 protected:
-    ros::NodeHandle n;
-    sensor_msgs::LaserScan last_scan;    
-    bool module_initialized,first_laser_scan,new_scan_available;
-    tf::TransformListener tf_listener;          //Do not put inside the callback
-    tf::TransformBroadcaster odom_broadcaster;
+    ros::NodeHandle             n;
+    sensor_msgs::LaserScan      last_scan;
+    bool                        module_initialized,first_laser_scan,new_scan_available, GT_pose_initialized;
+    tf::TransformListener       tf_listener;          //Do not put inside the callback
+    tf::TransformBroadcaster    odom_broadcaster;
+    nav_msgs::Odometry          initial_robot_pose;
 
     //Subscriptions & Publishers
-    ros::Subscriber laser_sub;
+    ros::Subscriber laser_sub, initPose_sub;
     ros::Publisher odom_pub;
 
     //CallBacks
     void LaserCallBack(const sensor_msgs::LaserScan::ConstPtr& new_scan);
+    void initPoseCallBack(const nav_msgs::Odometry::ConstPtr& new_initPose);
 
     // Internal Data
 	std::vector<Eigen::MatrixXf> range;

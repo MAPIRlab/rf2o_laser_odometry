@@ -34,14 +34,35 @@ CLaserOdometry2D::CLaserOdometry2D()
     //----------------
     ros::NodeHandle pn("~");
     pn.param<std::string>("laser_scan_topic",laser_scan_topic,"/laser_scan");
+    pn.param<std::string>("odom_topic", odom_topic, "/odom_rf2o");
     pn.param<std::string>("base_frame_id", base_frame_id, "/base_link");
     pn.param<std::string>("odom_frame_id", odom_frame_id, "/odom");
+    pn.param<bool>("publish_tf", publish_tf, true);
+    pn.param<std::string>("init_pose_from_topic", init_pose_from_topic, "/base_pose_ground_truth");
     pn.param<double>("freq",freq,10.0);
 
     //Publishers and Subscribers
     //--------------------------    
-    odom_pub = pn.advertise<nav_msgs::Odometry>(odom_frame_id, 5);
+    odom_pub = pn.advertise<nav_msgs::Odometry>(odom_topic, 5);
     laser_sub = n.subscribe<sensor_msgs::LaserScan>(laser_scan_topic,1,&CLaserOdometry2D::LaserCallBack,this);
+
+    //init pose??
+    if (init_pose_from_topic != "")
+    {
+        initPose_sub = n.subscribe<nav_msgs::Odometry>(init_pose_from_topic,1,&CLaserOdometry2D::initPoseCallBack,this);
+        GT_pose_initialized  = false;
+    }
+    else
+    {
+        GT_pose_initialized = true;
+        initial_robot_pose.pose.pose.position.x = 0;
+        initial_robot_pose.pose.pose.position.y = 0;
+        initial_robot_pose.pose.pose.position.z = 0;
+        initial_robot_pose.pose.pose.orientation.w = 0;
+        initial_robot_pose.pose.pose.orientation.x = 0;
+        initial_robot_pose.pose.pose.orientation.y = 0;
+        initial_robot_pose.pose.pose.orientation.z = 0;
+    }
 
     //Init variables
     module_initialized = false;
@@ -101,12 +122,32 @@ void CLaserOdometry2D::Init()
     LaserPoseOnTheRobot.setRotationMatrix(R);
 
 
-    //Set the initial pose
-    laser_pose = LaserPoseOnTheRobot;
-    laser_oldpose = LaserPoseOnTheRobot;
+    //Robot initial pose (see MQTT:bridge)
+    mrpt::poses::CPose3D robotInitialPose;
+    geometry_msgs::Pose _src = initial_robot_pose.pose.pose;
 
-    // Init module
-    //-------------
+    robotInitialPose.x(_src.position.x);
+    robotInitialPose.y(_src.position.y);
+
+    mrpt::math::CQuaternionDouble quat;
+    quat.x(_src.orientation.x);
+    quat.y(_src.orientation.y);
+    quat.z(_src.orientation.z);
+    quat.r(_src.orientation.w);
+    double roll, pitch, yaw;
+    quat.rpy(roll, pitch, yaw);
+    robotInitialPose.setYawPitchRoll(yaw,pitch,roll);
+    //robotInitialPose.phi(yaw);
+
+
+
+    //Set the initial pose
+    laser_pose = CPose2D(robotInitialPose + LaserPoseOnTheRobot);
+    laser_oldpose = CPose2D(robotInitialPose + LaserPoseOnTheRobot);
+
+
+    // Init module (internal)
+    //------------------------
     range_wf.setSize(1, width);
 
     //Resize vectors according to levels
@@ -976,16 +1017,19 @@ void CLaserOdometry2D::PoseUpdate()
 
     //first, we'll publish the odometry over tf
     //---------------------------------------
-    geometry_msgs::TransformStamped odom_trans;
-    odom_trans.header.stamp = ros::Time::now();
-    odom_trans.header.frame_id = base_frame_id;
-    odom_trans.child_frame_id = odom_frame_id;
-    odom_trans.transform.translation.x = robot_pose.x();
-    odom_trans.transform.translation.y = robot_pose.y();
-    odom_trans.transform.translation.z = 0.0;
-    odom_trans.transform.rotation = tf::createQuaternionMsgFromYaw(robot_pose.yaw());
-    //send the transform
-    odom_broadcaster.sendTransform(odom_trans);
+    if (publish_tf)
+    {
+        geometry_msgs::TransformStamped odom_trans;
+        odom_trans.header.stamp = ros::Time::now();
+        odom_trans.header.frame_id = base_frame_id;
+        odom_trans.child_frame_id = odom_frame_id;
+        odom_trans.transform.translation.x = robot_pose.x();
+        odom_trans.transform.translation.y = robot_pose.y();
+        odom_trans.transform.translation.z = 0.0;
+        odom_trans.transform.rotation = tf::createQuaternionMsgFromYaw(robot_pose.yaw());
+        //send the transform
+        odom_broadcaster.sendTransform(odom_trans);
+    }
 
     //next, we'll publish the odometry message over ROS
     //-------------------------------------------------
@@ -1014,21 +1058,35 @@ void CLaserOdometry2D::PoseUpdate()
 
 void CLaserOdometry2D::LaserCallBack(const sensor_msgs::LaserScan::ConstPtr& new_scan)
 {
-    //Keep in memory the last received laser_scan
-    last_scan = *new_scan;
+    if (GT_pose_initialized)
+    {
+        //Keep in memory the last received laser_scan
+        last_scan = *new_scan;
 
-    //Initialize module on first scan
-    if (first_laser_scan)
-    {
-        Init();
-        first_laser_scan = false;
+        //Initialize module on first scan
+        if (first_laser_scan)
+        {
+            Init();
+            first_laser_scan = false;
+        }
+        else
+        {
+            //copy laser scan to internal variable
+            for (unsigned int i = 0; i<width; i++)
+                range_wf(i) = new_scan->ranges[i];
+            new_scan_available = true;
+        }
     }
-    else
+}
+
+
+void CLaserOdometry2D::initPoseCallBack(const nav_msgs::Odometry::ConstPtr& new_initPose)
+{
+    //Initialize module on first GT pose. Else do Nothing!
+    if (!GT_pose_initialized)
     {
-        //copy laser scan to internal variable
-        for (unsigned int i = 0; i<width; i++)
-            range_wf(i) = new_scan->ranges[i];
-        new_scan_available = true;
+        initial_robot_pose = *new_initPose;
+        GT_pose_initialized = true;
     }
 }
 
