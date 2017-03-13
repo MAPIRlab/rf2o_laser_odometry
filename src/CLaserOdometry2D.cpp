@@ -1019,10 +1019,11 @@ void CLaserOdometry2D::PoseUpdate()
     //---------------------------------------
     if (publish_tf)
     {
+        //ROS_INFO("[rf2o] Publishing TF: [base_link] to [odom]");
         geometry_msgs::TransformStamped odom_trans;
         odom_trans.header.stamp = ros::Time::now();
-        odom_trans.header.frame_id = base_frame_id;
-        odom_trans.child_frame_id = odom_frame_id;
+        odom_trans.header.frame_id = odom_frame_id;
+        odom_trans.child_frame_id = base_frame_id;
         odom_trans.transform.translation.x = robot_pose.x();
         odom_trans.transform.translation.y = robot_pose.y();
         odom_trans.transform.translation.z = 0.0;
@@ -1033,6 +1034,7 @@ void CLaserOdometry2D::PoseUpdate()
 
     //next, we'll publish the odometry message over ROS
     //-------------------------------------------------
+    //ROS_INFO("[rf2o] Publishing Odom Topic");
     nav_msgs::Odometry odom;
     odom.header.stamp = ros::Time::now();
     odom.header.frame_id = odom_frame_id;
