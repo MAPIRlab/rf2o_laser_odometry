@@ -32,7 +32,7 @@
 #else
 #   include <mrpt/slam/CObservation2DRangeScan.h>
 #   include <mrpt/slam/CObservationOdometry.h>
-    using namespace mrpt::slam;
+
 #endif
 
 #if MRPT_VERSION<0x150
@@ -169,7 +169,7 @@ protected:
     void solveSystemNonLinear();
 	void filterLevelSolution();
 	void PoseUpdate();
-    void Reset(mrpt::poses::CPose3D ini_pose, CObservation2DRangeScan scan);
+    void Reset(mrpt::poses::CPose3D ini_pose, mrpt::poses::CObservation2DRangeScan scan);
 };
 
 #endif

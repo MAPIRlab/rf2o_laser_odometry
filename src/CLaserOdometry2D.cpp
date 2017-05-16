@@ -14,13 +14,6 @@
 ******************************************************************************************** */
 
 #include "rf2o_laser_odometry/CLaserOdometry2D.h"
-using namespace mrpt;
-using namespace mrpt::math;
-using namespace mrpt::utils;
-using namespace mrpt::poses;
-using namespace std;
-using namespace Eigen;
-
 
 // --------------------------------------------
 // CLaserOdometry2D
@@ -468,8 +461,8 @@ void CLaserOdometry2D::calculaterangeDerivativesSurface()
 
 	for (unsigned int u = 0; u < cols_i-1; u++)
     {
-		const float dist = square(xx_inter[image_level](u+1) - xx_inter[image_level](u))
-							+ square(yy_inter[image_level](u+1) - yy_inter[image_level](u));
+    const float dist = mrpt::math::square(xx_inter[image_level](u+1) - xx_inter[image_level](u))
+              + mrpt::math::square(yy_inter[image_level](u+1) - yy_inter[image_level](u));
 		if (dist  > 0.f)
 			rtita(u) = sqrt(dist);
 	}
@@ -545,7 +538,7 @@ void CLaserOdometry2D::computeWeights()
 
 	//Parameters for error_linearization
 	const float kdtita = 1.f;
-	const float kdt = kdtita/square(fps);
+  const float kdt = kdtita/mrpt::math::square(fps);
 	const float k2d = 0.2f;
 
 	for (unsigned int u = 1; u < cols_i-1; u++)
@@ -559,7 +552,7 @@ void CLaserOdometry2D::computeWeights()
 			const float dtitat = ini_dtita - final_dtita;
 			const float dtita2 = dtita(u+1) - dtita(u-1);
 
-			const float w_der = kdt*square(dt(u)) + kdtita*square(dtita(u)) + k2d*(abs(dtitat) + abs(dtita2));
+      const float w_der = kdt*mrpt::math::square(dt(u)) + kdtita*mrpt::math::square(dtita(u)) + k2d*(abs(dtitat) + abs(dtita2));
 
 			weights(u) = sqrt(1.f/w_der);
 		}
@@ -615,13 +608,13 @@ void CLaserOdometry2D::solveSystemOneLevel()
 		}
 
 	//Solve the linear system of equations using a minimum least squares method
-	MatrixXf AtA, AtB;
+  Eigen::MatrixXf AtA, AtB;
 	AtA.multiply_AtA(A);
 	AtB.multiply_AtB(A,B);
 	Var = AtA.ldlt().solve(AtB);
 
 	//Covariance matrix calculation 	Cov Order -> vx,vy,wz
-	MatrixXf res(num_valid_range,1);
+  Eigen::MatrixXf res(num_valid_range,1);
 	res = A*Var - B;
 	cov_odo = (1.f/float(num_valid_range-3))*AtA.inverse()*res.squaredNorm();
 
@@ -657,13 +650,13 @@ void CLaserOdometry2D::solveSystemNonLinear()
         }
 
     //Solve the linear system of equations using a minimum least squares method
-    MatrixXf AtA, AtB;
+    Eigen::MatrixXf AtA, AtB;
     AtA.multiply_AtA(A);
     AtB.multiply_AtB(A,B);
     Var = AtA.ldlt().solve(AtB);
 
     //Covariance matrix calculation 	Cov Order -> vx,vy,wz
-    MatrixXf res(num_valid_range,1);
+    Eigen::MatrixXf res(num_valid_range,1);
     res = A*Var - B;
     //cout << endl << "max res: " << res.maxCoeff();
     //cout << endl << "min res: " << res.minCoeff();
@@ -684,7 +677,7 @@ void CLaserOdometry2D::solveSystemNonLinear()
     const float k = 10.f/aver_dt; //200
     //float energy = 0.f;
     //for (unsigned int i=0; i<res.rows(); i++)
-    //	energy += log(1.f + square(k*res(i)));
+    //	energy += log(1.f + mrpt::math::square(k*res(i)));
     //printf("\n\nEnergy(0) = %f", energy);
 
     //Solve iterative reweighted least squares
@@ -696,7 +689,7 @@ void CLaserOdometry2D::solveSystemNonLinear()
         for (unsigned int u = 1; u < cols_i-1; u++)
             if (null(u) == 0)
             {
-                const float res_weight = sqrt(1.f/(1.f + square(k*res(cont))));
+                const float res_weight = sqrt(1.f/(1.f + mrpt::math::square(k*res(cont))));
 
                 //Fill the matrix Aw
                 Aw(cont,0) = res_weight*A(cont,0);
@@ -715,17 +708,18 @@ void CLaserOdometry2D::solveSystemNonLinear()
         ////Compute the energy
         //energy = 0.f;
         //for (unsigned int j=0; j<res.rows(); j++)
-        //	energy += log(1.f + square(k*res(j)));
+        //	energy += log(1.f + mrpt::math::square(k*res(j)));
         //printf("\nEnergy(%d) = %f", i, energy);
     }
 
     cov_odo = (1.f/float(num_valid_range-3))*AtA.inverse()*res.squaredNorm();
     kai_loc_level = Var;
+
     if (verbose)
         std::cout << endl << "[rf2o] COV_ODO: " << cov_odo  << endl;
 }
 
-void CLaserOdometry2D::Reset(CPose3D ini_pose, CObservation2DRangeScan scan)
+void CLaserOdometry2D::Reset(mrpt::poses::CPose3D ini_pose, mrpt::poses::CObservation2DRangeScan scan)
 {
 	//Set the initial pose
 	laser_pose = ini_pose;
@@ -741,11 +735,12 @@ void CLaserOdometry2D::Reset(CPose3D ini_pose, CObservation2DRangeScan scan)
 void CLaserOdometry2D::performWarping()
 {
 	Matrix3f acu_trans;
+
 	acu_trans.setIdentity();
 	for (unsigned int i=1; i<=level; i++)
 		acu_trans = transformations[i-1]*acu_trans;
 
-	MatrixXf wacu(1,cols_i);
+  Eigen::MatrixXf wacu(1,cols_i);
 	wacu.assign(0.f);
 	range_warped[image_level].assign(0.f);
 
@@ -781,11 +776,11 @@ void CLaserOdometry2D::performWarping()
 				}
 				else
 				{
-					const float w_r = square(delta_l);
+          const float w_r = mrpt::math::square(delta_l);
 					range_warped[image_level](uwarp_r) += w_r*range_w;
 					wacu(uwarp_r) += w_r;
 
-					const float w_l = square(delta_r);
+          const float w_l = mrpt::math::square(delta_r);
 					range_warped[image_level](uwarp_l) += w_l*range_w;
 					wacu(uwarp_l) += w_l;
 				}
@@ -830,18 +825,18 @@ void CLaserOdometry2D::filterLevelSolution()
 
 	//First, we have to describe both the new linear and angular speeds in the "eigenvector" basis
 	//-------------------------------------------------------------------------------------------------
-	Matrix<float,3,3> Bii;
-	Matrix<float,3,1> kai_b;
+  Eigen::Matrix<float,3,3> Bii;
+  Eigen::Matrix<float,3,1> kai_b;
 	Bii = eigensolver.eigenvectors();
 
 	kai_b = Bii.colPivHouseholderQr().solve(kai_loc_level);
 
 	//Second, we have to describe both the old linear and angular speeds in the "eigenvector" basis too
 	//-------------------------------------------------------------------------------------------------
-	CMatrixFloat31 kai_loc_sub;
+  mrpt::math::CMatrixFloat31 kai_loc_sub;
 
 	//Important: we have to substract the solutions from previous levels
-	Matrix3f acu_trans;
+  Eigen::Matrix3f acu_trans;
 	acu_trans.setIdentity();
 	for (unsigned int i=0; i<level; i++)
 		acu_trans = transformations[i]*acu_trans;
@@ -851,16 +846,16 @@ void CLaserOdometry2D::filterLevelSolution()
 	if (acu_trans(0,0) > 1.f)
 		kai_loc_sub(2) = 0.f;
 	else
-		kai_loc_sub(2) = -fps*acos(acu_trans(0,0))*sign(acu_trans(1,0));
+    kai_loc_sub(2) = -fps*acos(acu_trans(0,0))*mrpt::math::sign(acu_trans(1,0));
 	kai_loc_sub += kai_loc_old;
 
-	Matrix<float,3,1> kai_b_old;
+  Eigen::Matrix<float,3,1> kai_b_old;
 	kai_b_old = Bii.colPivHouseholderQr().solve(kai_loc_sub);
 
 	//Filter speed
 	const float cf = 15e3f*expf(-int(level)), df = 0.05f*expf(-int(level));
 
-	Matrix<float,3,1> kai_b_fil;
+  Eigen::Matrix<float,3,1> kai_b_fil;
 	for (unsigned int i=0; i<3; i++)
 	{
 			kai_b_fil(i,0) = (kai_b(i,0) + (cf*eigensolver.eigenvalues()(i,0) + df)*kai_b_old(i,0))/(1.f + cf*eigensolver.eigenvalues()(i,0) + df);
@@ -868,7 +863,7 @@ void CLaserOdometry2D::filterLevelSolution()
 	}
 
 	//Transform filtered speed to local reference frame and compute transformation
-	Matrix<float,3,1> kai_loc_fil = Bii.inverse().colPivHouseholderQr().solve(kai_b_fil);
+  Eigen::Matrix<float,3,1> kai_loc_fil = Bii.inverse().colPivHouseholderQr().solve(kai_b_fil);
 
 	//transformation
 	const float incrx = kai_loc_fil(0)/fps;
@@ -887,7 +882,7 @@ void CLaserOdometry2D::PoseUpdate()
 {
 	//First, compute the overall transformation
 	//---------------------------------------------------
-	Matrix3f acu_trans;
+  Eigen::Matrix3f acu_trans;
 	acu_trans.setIdentity();
 	for (unsigned int i=1; i<=ctf_levels; i++)
 		acu_trans = transformations[i-1]*acu_trans;
@@ -900,7 +895,7 @@ void CLaserOdometry2D::PoseUpdate()
 	if (acu_trans(0,0) > 1.f)
 		kai_loc(2) = 0.f;
 	else
-		kai_loc(2) = fps*acos(acu_trans(0,0))*sign(acu_trans(1,0));
+    kai_loc(2) = fps*acos(acu_trans(0,0))*mrpt::math::sign(acu_trans(1,0));
 
 	//cout << endl << "Arc cos (incr tita): " << kai_loc(2);
 
@@ -914,6 +909,7 @@ void CLaserOdometry2D::PoseUpdate()
 	//						Update poses
 	//-------------------------------------------------------
 	laser_oldpose = laser_pose;
+
 	math::CMatrixDouble33 aux_acu = acu_trans;
 	poses::CPose2D pose_aux_2D(acu_trans(0,2), acu_trans(1,2), kai_loc(2)/fps);
         laser_pose = laser_pose + CPose3D(pose_aux_2D);
@@ -945,7 +941,7 @@ void CLaserOdometry2D::PoseUpdate()
     double time_inc_sec = (current_scan_time - last_odom_time).toSec();
     last_odom_time = current_scan_time;
     lin_speed = acu_trans(0,2) / time_inc_sec;
-    //double lin_speed = sqrt( square(robot_oldpose.x()-robot_pose.x()) + square(robot_oldpose.y()-robot_pose.y()) )/time_inc_sec;
+    //double lin_speed = sqrt( mrpt::math::square(robot_oldpose.x()-robot_pose.x()) + mrpt::math::square(robot_oldpose.y()-robot_pose.y()) )/time_inc_sec;
     double ang_inc = robot_pose.yaw() - robot_oldpose.yaw();
     if (ang_inc > 3.14159)
         ang_inc -= 2*3.14159;

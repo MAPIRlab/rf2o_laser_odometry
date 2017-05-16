@@ -14,12 +14,6 @@
 ******************************************************************************************** */
 
 #include "rf2o_laser_odometry/CLaserOdometry2D.h"
-using namespace mrpt;
-using namespace mrpt::math;
-using namespace mrpt::utils;
-using namespace mrpt::poses;
-using namespace std;
-using namespace Eigen;
 
 class CLaserOdometry2DNode : CLaserOdometry2D
 {
