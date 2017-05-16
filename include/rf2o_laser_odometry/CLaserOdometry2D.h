@@ -59,19 +59,13 @@ class CLaserOdometry2D
 public:
 	CLaserOdometry2D();
     ~CLaserOdometry2D();
+
+    void Init(const sensor_msgs::LaserScan& scan,
+              const geometry_msgs::Pose& initial_robot_pose);
+
     bool is_initialized();
-    bool scan_available();
-    void Init();
-    void odometryCalculation();
 
-    std::string         laser_scan_topic;
-    std::string         odom_topic;
-    bool                publish_tf;
-    std::string         base_frame_id;
-    std::string         odom_frame_id;
-    std::string         init_pose_from_topic;
-    double              freq;
-
+<<<<<<< HEAD
 protected:
     ros::NodeHandle             n;
     sensor_msgs::LaserScan      last_scan;
@@ -79,14 +73,15 @@ protected:
     tf::TransformListener       tf_listener;          //Do not put inside the callback
     tf::TransformBroadcaster    odom_broadcaster;
     nav_msgs::Odometry          initial_robot_pose;
+=======
+    void odometryCalculation(const sensor_msgs::LaserScan& scan);
+>>>>>>> wip separating node from computation
 
-    //Subscriptions & Publishers
-    ros::Subscriber laser_sub, initPose_sub;
-    ros::Publisher odom_pub;
+    void setLaserPose(const tf::Transform& laser_pose);
 
-    //CallBacks
-    void LaserCallBack(const sensor_msgs::LaserScan::ConstPtr& new_scan);
-    void initPoseCallBack(const nav_msgs::Odometry::ConstPtr& new_initPose);
+protected:
+
+  bool module_initialized,first_laser_scan;
 
     // Internal Data
 	std::vector<Eigen::MatrixXf> range;
@@ -130,17 +125,22 @@ protected:
     unsigned int iter_irls;
 	float g_mask[5];
 
+  double lin_speed, ang_speed;
+
     //mrpt::gui::CDisplayWindowPlots window;
 	mrpt::utils::CTicTac		m_clock;
 	float		m_runtime;
-    ros::Time last_odom_time;
+    ros::Time last_odom_time, current_scan_time;
 
 	mrpt::math::CMatrixFloat31 kai_abs;
 	mrpt::math::CMatrixFloat31 kai_loc;
 	mrpt::math::CMatrixFloat31 kai_loc_old;
 	mrpt::math::CMatrixFloat31 kai_loc_level;
 
-	mrpt::poses::CPose3D laser_pose;
+  mrpt::poses::CPose3D laser_pose_on_robot;
+  mrpt::poses::CPose3D laser_pose_on_robot_inv;
+
+  mrpt::poses::CPose3D laser_pose;
 	mrpt::poses::CPose3D laser_oldpose;
     mrpt::poses::CPose3D robot_pose;
     mrpt::poses::CPose3D robot_oldpose;

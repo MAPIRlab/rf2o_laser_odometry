@@ -52,8 +52,15 @@ include_directories(
   ${EIGEN_INCLUDE_DIRS}
 )
 
+## Declare a cpp library
+add_library(${PROJECT_NAME}
+    src/CLaserOdometry2D.cpp
+)
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
+
 ## Declare a cpp executable
-add_executable(rf2o_laser_odometry_node src/CLaserOdometry2D.cpp)
+add_executable(rf2o_laser_odometry_node src/CLaserOdometry2DNode.cpp)
+target_link_libraries(rf2o_laser_odometry_node ${PROJECT_NAME})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(rf2o_laser_odometry_node
