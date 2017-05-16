@@ -224,18 +224,6 @@ void CLaserOdometry2DNode::publish()
   odom_pub.publish(odom);
 }
 
-//void CLaserOdometry2D::Reset(CPose3D ini_pose, CObservation2DRangeScan scan)
-//{
-//	//Set the initial pose
-//	laser_pose = ini_pose;
-//	laser_oldpose = ini_pose;
-
-//    //readLaser(scan);
-//	createImagePyramid();
-//    //readLaser(scan);
-//	createImagePyramid();
-//}
-
 //-----------------------------------------------------------------------------------
 //                                   MAIN
 //-----------------------------------------------------------------------------------

@@ -26,7 +26,9 @@ using namespace Eigen;
 // CLaserOdometry2D
 //---------------------------------------------
 
-CLaserOdometry2D::CLaserOdometry2D()
+CLaserOdometry2D::CLaserOdometry2D() :
+  module_initialized(false),
+  first_laser_scan(true)
 {
   //
 }
@@ -174,6 +176,26 @@ void CLaserOdometry2D::Init(const sensor_msgs::LaserScan& scan,
     last_odom_time = ros::Time::now();
 }
 
+
+mrpt::poses::CPose3D& CLaserOdometry2D::getIncrement()
+{
+  return last_increment;
+}
+
+const mrpt::poses::CPose3D& CLaserOdometry2D::getIncrement() const
+{
+  return last_increment;
+}
+
+mrpt::poses::CPose3D& CLaserOdometry2D::getPose()
+{
+  return robot_pose;
+}
+
+const mrpt::poses::CPose3D& CLaserOdometry2D::getPose() const
+{
+  return robot_pose;
+}
 
 void CLaserOdometry2D::odometryCalculation(const sensor_msgs::LaserScan& scan)
 {
@@ -895,6 +917,8 @@ void CLaserOdometry2D::PoseUpdate()
 	math::CMatrixDouble33 aux_acu = acu_trans;
 	poses::CPose2D pose_aux_2D(acu_trans(0,2), acu_trans(1,2), kai_loc(2)/fps);
         laser_pose = laser_pose + CPose3D(pose_aux_2D);
+
+  last_increment = pose_aux_2D;
 
 
 

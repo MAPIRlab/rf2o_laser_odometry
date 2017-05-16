@@ -79,6 +79,12 @@ protected:
 
     void setLaserPose(const tf::Transform& laser_pose);
 
+    mrpt::poses::CPose3D& getIncrement();
+    const mrpt::poses::CPose3D& getIncrement() const;
+
+    mrpt::poses::CPose3D& getPose();
+    const mrpt::poses::CPose3D& getPose() const;
+
 protected:
 
   bool module_initialized,first_laser_scan;
@@ -136,6 +142,8 @@ protected:
 	mrpt::math::CMatrixFloat31 kai_loc;
 	mrpt::math::CMatrixFloat31 kai_loc_old;
 	mrpt::math::CMatrixFloat31 kai_loc_level;
+
+  mrpt::poses::CPose3D last_increment;
 
   mrpt::poses::CPose3D laser_pose_on_robot;
   mrpt::poses::CPose3D laser_pose_on_robot_inv;
