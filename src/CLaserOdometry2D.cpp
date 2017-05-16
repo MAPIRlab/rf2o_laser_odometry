@@ -32,22 +32,11 @@ CLaserOdometry2D::~CLaserOdometry2D()
   //
 }
 
-void CLaserOdometry2D::setLaserPose(const tf::Transform& laser_pose)
+void CLaserOdometry2D::setLaserPose(const mrpt::poses::CPose3D& laser_pose)
 {
   //Set laser pose on the robot
 
-  //TF:transform -> mrpt::CPose3D (see mrpt-ros-bridge)
-  const tf::Vector3 &t = laser_pose.getOrigin();
-  laser_pose_on_robot.x() = t[0];
-  laser_pose_on_robot.y() = t[1];
-  laser_pose_on_robot.z() = t[2];
-  const tf::Matrix3x3 &basis = laser_pose.getBasis();
-  mrpt::math::CMatrixDouble33 R;
-  for(int r = 0; r < 3; r++)
-      for(int c = 0; c < 3; c++)
-          R(r,c) = basis[r][c];
-  laser_pose_on_robot.setRotationMatrix(R);
-
+  laser_pose_on_robot = laser_pose;
   laser_pose_on_robot_inv = laser_pose_on_robot;
   laser_pose_on_robot_inv.inverse();
 }

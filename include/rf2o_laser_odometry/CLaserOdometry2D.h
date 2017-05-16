@@ -17,11 +17,8 @@
 #define CLaserOdometry2D_H
 
 #include <ros/ros.h>
-#include <tf/transform_broadcaster.h>
-#include <tf/transform_listener.h>
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/LaserScan.h>
-#include <geometry_msgs/Twist.h>
 
 // MRPT related headers
 #include <mrpt/version.h>
@@ -77,7 +74,7 @@ protected:
     void odometryCalculation(const sensor_msgs::LaserScan& scan);
 >>>>>>> wip separating node from computation
 
-    void setLaserPose(const tf::Transform& laser_pose);
+    void setLaserPose(const mrpt::poses::CPose3D& laser_pose);
 
     mrpt::poses::CPose3D& getIncrement();
     const mrpt::poses::CPose3D& getIncrement() const;

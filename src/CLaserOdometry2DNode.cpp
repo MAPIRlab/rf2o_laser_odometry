@@ -15,6 +15,9 @@
 
 #include "rf2o_laser_odometry/CLaserOdometry2D.h"
 
+#include <tf/transform_broadcaster.h>
+#include <tf/transform_listener.h>
+
 class CLaserOdometry2DNode : CLaserOdometry2D
 {
 public:
@@ -24,6 +27,8 @@ public:
 
   void process();
   void publish();
+
+  bool setLaserPoseFromTf();
 
 public:
 
@@ -95,21 +100,7 @@ CLaserOdometry2DNode::CLaserOdometry2DNode() :
         initial_robot_pose.pose.pose.orientation.z = 0;
     }
 
-    // Set laser pose on the robot (through tF)
-    // This allow estimation of the odometry with respect to the robot base reference system.
-    tf::StampedTransform transform;
-    transform.setIdentity();
-    try
-    {
-        tf_listener.lookupTransform(base_frame_id, last_scan.header.frame_id, ros::Time(0), transform);
-    }
-    catch (tf::TransformException &ex)
-    {
-        ROS_ERROR("%s",ex.what());
-        ros::Duration(1.0).sleep();
-    }
-
-    setLaserPose(transform);
+    setLaserPoseFromTf();
 
     //Init variables
     module_initialized = false;
@@ -119,6 +110,44 @@ CLaserOdometry2DNode::CLaserOdometry2DNode() :
 CLaserOdometry2DNode::~CLaserOdometry2DNode()
 {
   //
+}
+
+bool CLaserOdometry2DNode::setLaserPoseFromTf()
+{
+  bool retrieved = false;
+
+  // Set laser pose on the robot (through tF)
+  // This allow estimation of the odometry with respect to the robot base reference system.
+  tf::StampedTransform transform;
+  transform.setIdentity();
+  try
+  {
+      tf_listener.lookupTransform(base_frame_id, last_scan.header.frame_id, ros::Time(0), transform);
+      retrieved = true;
+  }
+  catch (tf::TransformException &ex)
+  {
+      ROS_ERROR("%s",ex.what());
+      ros::Duration(1.0).sleep();
+      retrieved = false;
+  }
+
+  //TF:transform -> mrpt::CPose3D (see mrpt-ros-bridge)
+  mrpt::poses::CPose3D laser_tf;
+  const tf::Vector3 &t = transform.getOrigin();
+  laser_tf.x() = t[0];
+  laser_tf.y() = t[1];
+  laser_tf.z() = t[2];
+  const tf::Matrix3x3 &basis = transform.getBasis();
+  mrpt::math::CMatrixDouble33 R;
+  for(int r = 0; r < 3; r++)
+      for(int c = 0; c < 3; c++)
+          R(r,c) = basis[r][c];
+  laser_tf.setRotationMatrix(R);
+
+  setLaserPose(laser_tf);
+
+  return retrieved;
 }
 
 bool CLaserOdometry2DNode::scan_available()
