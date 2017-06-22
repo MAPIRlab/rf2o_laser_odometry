@@ -708,7 +708,7 @@ void CLaserOdometry2D::solveSystemNonLinear()
         std::cout << endl << "[rf2o] COV_ODO: " << cov_odo  << endl;
 }
 
-void CLaserOdometry2D::Reset(mrpt::poses::CPose3D ini_pose, mrpt::poses::CObservation2DRangeScan scan)
+void CLaserOdometry2D::Reset(mrpt::poses::CPose3D ini_pose, CObservation2DRangeScan scan)
 {
 	//Set the initial pose
 	laser_pose = ini_pose;
