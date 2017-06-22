@@ -834,8 +834,14 @@ void CLaserOdometry2D::filterLevelSolution()
 	kai_loc_sub(1) = -fps*acu_trans(1,2);
 	if (acu_trans(0,0) > 1.f)
 		kai_loc_sub(2) = 0.f;
-	else
-    kai_loc_sub(2) = -fps*acos(acu_trans(0,0))*mrpt::math::sign(acu_trans(1,0));
+    else
+    {
+#if MRPT_VERSION>=0x130
+        kai_loc_sub(2) = -fps*acos(acu_trans(0,0))*mrpt::utils::sign(acu_trans(1,0));
+#else
+        kai_loc_sub(2) = -fps*acos(acu_trans(0,0))*mrpt::math::sign(acu_trans(1,0));
+#endif
+    }
 	kai_loc_sub += kai_loc_old;
 
   Eigen::Matrix<float,3,1> kai_b_old;
@@ -884,8 +890,13 @@ void CLaserOdometry2D::PoseUpdate()
 	if (acu_trans(0,0) > 1.f)
 		kai_loc(2) = 0.f;
 	else
+    {
+#if MRPT_VERSION>=0x130
+    kai_loc(2) = fps*acos(acu_trans(0,0))*mrpt::utils::sign(acu_trans(1,0));
+#else
     kai_loc(2) = fps*acos(acu_trans(0,0))*mrpt::math::sign(acu_trans(1,0));
-
+#endif
+    }
 	//cout << endl << "Arc cos (incr tita): " << kai_loc(2);
 
 	float phi = laser_pose.yaw();
