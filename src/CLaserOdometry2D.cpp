@@ -282,7 +282,7 @@ void CLaserOdometry2D::odometryCalculation()
     }
 
     m_runtime = 1000*m_clock.Tac();
-    ROS_INFO("Time odometry (ms): %f", m_runtime);
+    ROS_DEBUG("Time odometry (ms): %f", m_runtime);
 
     //Update poses
     PoseUpdate();
@@ -950,7 +950,7 @@ void CLaserOdometry2D::PoseUpdate()
 	kai_loc_old(2) = kai_abs(2);
 
 
-    ROS_INFO("LASERodom = [%f %f %f]",laser_pose.x(),laser_pose.y(),laser_pose.yaw());
+    ROS_DEBUG("LASERodom = [%f %f %f]",laser_pose.x(),laser_pose.y(),laser_pose.yaw());
 
 
     // GET ROBOT POSE from LASER POSE
@@ -981,7 +981,7 @@ void CLaserOdometry2D::PoseUpdate()
 
     //Compose Transformations
     robot_pose = laser_pose + LaserPoseOnTheRobot_inv;
-    ROS_INFO("BASEodom = [%f %f %f]",robot_pose.x(),robot_pose.y(),robot_pose.yaw());
+    ROS_DEBUG("BASEodom = [%f %f %f]",robot_pose.x(),robot_pose.y(),robot_pose.yaw());
 
 
     // Estimate linear/angular speeds (mandatory for base_local_planner)
