@@ -3,9 +3,13 @@
   from consecutive range scans. It is very useful for the estimation of the robot odometry from
   2D laser range measurements.
   
+  For more info please visit: http://mapir.isa.uma.es/work/rf2o
+  
   Requirements:
   - 2D laser scan, publishing sensor_msgs::LaserScan
   - TF transform from the laser to the robot base
+  - MRPT (http://www.mrpt.org/)
+        - Tested with v1.3 (official ubuntu release)
 -->
 
 <launch>
@@ -17,7 +21,8 @@
     <param name="base_frame_id" value="/base_link"/>            # frame_id (tf) of the mobile robot base. A tf transform from the laser_frame to the base_frame is mandatory
     <param name="odom_frame_id" value="/odom" />                # frame_id (tf) to publish the odometry estimations    
     <param name="init_pose_from_topic" value="/base_pose_ground_truth" /> # (Odom topic) Leave empty to start at point (0,0)
-    <param name="freq" value="6.0"/>                            # Execution frequency. See "Planar Odometry from a Radial Laser Scanner. A Range Flow-based Approach. ICRA'16"
+    <param name="freq" value="6.0"/>                            # Execution frequency.
+    <param name="verbose" value="true" />                       # verbose
   </node>
   
 </launch>
