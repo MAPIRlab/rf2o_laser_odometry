@@ -40,6 +40,7 @@ CLaserOdometry2D::CLaserOdometry2D()
     pn.param<bool>("publish_tf", publish_tf, true);
     pn.param<std::string>("init_pose_from_topic", init_pose_from_topic, "/base_pose_ground_truth");
     pn.param<double>("freq",freq,10.0);
+    pn.param<bool>("verbose", verbose, true);
 
     //Publishers and Subscribers
     //--------------------------    
@@ -88,7 +89,8 @@ bool CLaserOdometry2D::scan_available()
 void CLaserOdometry2D::Init()
 {
     //Got an initial scan laser, obtain its parametes
-    ROS_INFO("Got first Laser Scan .... Configuring node");
+    if (verbose)
+        ROS_INFO("[rf2o] Got first Laser Scan .... Configuring node");
     width = last_scan.ranges.size();    // Num of samples (size) of the scan laser
     cols = width;						// Max reolution. Should be similar to the width parameter
     fovh = fabs(last_scan.angle_max - last_scan.angle_min); // Horizontal Laser's FOV
@@ -282,7 +284,8 @@ void CLaserOdometry2D::odometryCalculation()
     }
 
     m_runtime = 1000*m_clock.Tac();
-    ROS_INFO("Time odometry (ms): %f", m_runtime);
+    if (verbose)
+        ROS_INFO("[rf2o] execution time (ms): %f", m_runtime);
 
     //Update poses
     PoseUpdate();
@@ -653,7 +656,7 @@ void CLaserOdometry2D::solveSystemOneLevel()
 }
 
 
-// Solves the system by considering the Cauchy M-estimatorrobust-function
+// Solves the system by considering the Cauchy M-estimator robust-function
 void CLaserOdometry2D::solveSystemNonLinear()
 {
     A.resize(num_valid_range,3); Aw.resize(num_valid_range,3);
@@ -745,7 +748,8 @@ void CLaserOdometry2D::solveSystemNonLinear()
 
     cov_odo = (1.f/float(num_valid_range-3))*AtA.inverse()*res.squaredNorm();
     kai_loc_level = Var;
-    std::cout << endl << "COV_ODO: " << cov_odo  << endl;
+    if (verbose)
+        std::cout << endl << "[rf2o] COV_ODO: " << cov_odo  << endl;
 }
 
 void CLaserOdometry2D::Reset(CPose3D ini_pose, CObservation2DRangeScan scan)
@@ -845,8 +849,9 @@ void CLaserOdometry2D::filterLevelSolution()
 	//----------------------------------------------------------
 	SelfAdjointEigenSolver<MatrixXf> eigensolver(cov_odo);
 	if (eigensolver.info() != Success) 
-	{ 
-		printf("Eigensolver couldn't find a solution. Pose is not updated");
+	{
+	    if (verbose)
+    		printf("[rf2o] ERROR: Eigensolver couldn't find a solution. Pose is not updated");
 		return;
 	}
 	
@@ -949,8 +954,8 @@ void CLaserOdometry2D::PoseUpdate()
 	kai_loc_old(1) = -kai_abs(0)*sin(phi) + kai_abs(1)*cos(phi);
 	kai_loc_old(2) = kai_abs(2);
 
-
-    ROS_INFO("LASERodom = [%f %f %f]",laser_pose.x(),laser_pose.y(),laser_pose.yaw());
+    if (verbose)
+        ROS_INFO("[rf2o] LASERodom = [%f %f %f]",laser_pose.x(),laser_pose.y(),laser_pose.yaw());
 
 
     // GET ROBOT POSE from LASER POSE
@@ -981,7 +986,8 @@ void CLaserOdometry2D::PoseUpdate()
 
     //Compose Transformations
     robot_pose = laser_pose + LaserPoseOnTheRobot_inv;
-    ROS_INFO("BASEodom = [%f %f %f]",robot_pose.x(),robot_pose.y(),robot_pose.yaw());
+    if (verbose)
+        ROS_INFO("BASEodom = [%f %f %f]",robot_pose.x(),robot_pose.y(),robot_pose.yaw());
 
 
     // Estimate linear/angular speeds (mandatory for base_local_planner)
@@ -1103,7 +1109,7 @@ int main(int argc, char** argv)
 
     //Main Loop
     //----------
-    ROS_INFO("initialization complete...Looping");
+    ROS_INFO("[rf2o] initialization complete...Looping");
     ros::Rate loop_rate(myLaserOdom.freq);
     while (ros::ok())
     {
@@ -1116,7 +1122,7 @@ int main(int argc, char** argv)
         }
         else
         {
-            ROS_WARN("Waiting for laser_scans....") ;
+            ROS_WARN("[rf2o] Waiting for laser_scans....") ;
         }
 
         loop_rate.sleep();

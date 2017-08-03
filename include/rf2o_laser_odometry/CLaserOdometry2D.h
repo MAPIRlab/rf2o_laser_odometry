@@ -24,7 +24,6 @@
 #include <geometry_msgs/Twist.h>
 
 // MRPT related headers
-// MRPT related headers
 #include <mrpt/version.h>
 #if MRPT_VERSION>=0x130
 #	include <mrpt/obs/CObservation2DRangeScan.h>
@@ -72,7 +71,7 @@ public:
 protected:
     ros::NodeHandle             n;
     sensor_msgs::LaserScan      last_scan;
-    bool                        module_initialized,first_laser_scan,new_scan_available, GT_pose_initialized;
+    bool                        module_initialized,first_laser_scan,new_scan_available, GT_pose_initialized, verbose;
     tf::TransformListener       tf_listener;          //Do not put inside the callback
     tf::TransformBroadcaster    odom_broadcaster;
     nav_msgs::Odometry          initial_robot_pose;
