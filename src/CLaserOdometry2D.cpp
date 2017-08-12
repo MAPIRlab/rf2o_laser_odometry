@@ -158,15 +158,14 @@ void CLaserOdometry2D::Init(const sensor_msgs::LaserScan& scan,
     last_odom_time = ros::Time::now();
 }
 
-
-mrpt::poses::CPose3D& CLaserOdometry2D::getIncrement()
+const mrpt::poses::CPose3D& CLaserOdometry2D::getIncrement() const
 {
   return last_increment;
 }
 
-const mrpt::poses::CPose3D& CLaserOdometry2D::getIncrement() const
+const Eigen::Matrix<float, 3, 3>& CLaserOdometry2D::getIncrementCovariance() const
 {
-  return last_increment;
+  return cov_odo;
 }
 
 mrpt::poses::CPose3D& CLaserOdometry2D::getPose()

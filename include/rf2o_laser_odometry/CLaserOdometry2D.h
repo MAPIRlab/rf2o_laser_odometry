@@ -67,8 +67,9 @@ public:
 
     void setLaserPose(const mrpt::poses::CPose3D& laser_pose);
 
-    mrpt::poses::CPose3D& getIncrement();
     const mrpt::poses::CPose3D& getIncrement() const;
+
+    const Eigen::Matrix<float, 3, 3>& getIncrementCovariance() const;
 
     mrpt::poses::CPose3D& getPose();
     const mrpt::poses::CPose3D& getPose() const;
