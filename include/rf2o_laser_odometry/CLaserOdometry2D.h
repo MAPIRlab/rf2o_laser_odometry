@@ -40,7 +40,7 @@
 #include <mrpt/system/os.h>
 #include <mrpt/poses/CPose3D.h>
 #include <mrpt/utils.h>
-#include <mrpt/opengl.h>
+//#include <mrpt/opengl.h>
 #include <mrpt/math/CHistogram.h>
 
 #include <boost/bind.hpp>
@@ -63,17 +63,7 @@ public:
 
     bool is_initialized();
 
-<<<<<<< HEAD
-protected:
-    ros::NodeHandle             n;
-    sensor_msgs::LaserScan      last_scan;
-    bool                        module_initialized,first_laser_scan,new_scan_available, GT_pose_initialized, verbose;
-    tf::TransformListener       tf_listener;          //Do not put inside the callback
-    tf::TransformBroadcaster    odom_broadcaster;
-    nav_msgs::Odometry          initial_robot_pose;
-=======
     void odometryCalculation(const sensor_msgs::LaserScan& scan);
->>>>>>> wip separating node from computation
 
     void setLaserPose(const mrpt::poses::CPose3D& laser_pose);
 
@@ -85,7 +75,7 @@ protected:
 
 protected:
 
-  bool module_initialized,first_laser_scan;
+  bool verbose,module_initialized,first_laser_scan;
 
     // Internal Data
 	std::vector<Eigen::MatrixXf> range;
@@ -101,7 +91,7 @@ protected:
 	std::vector<Eigen::MatrixXf> yy_old;
 	std::vector<Eigen::MatrixXf> yy_warped;
 	std::vector<Eigen::MatrixXf> transformations;
-	
+
 	Eigen::MatrixXf range_wf;
 	Eigen::MatrixXf dtita;
 	Eigen::MatrixXf dt;
@@ -160,7 +150,7 @@ protected:
 	void calculateCoord();
 	void performWarping();
 	void calculaterangeDerivativesSurface();
-	void computeNormals();	
+	void computeNormals();
 	void computeWeights();
 	void findNullPoints();
 	void solveSystemOneLevel();

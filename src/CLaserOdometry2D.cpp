@@ -50,9 +50,9 @@ void CLaserOdometry2D::Init(const sensor_msgs::LaserScan& scan,
                             const geometry_msgs::Pose& initial_robot_pose)
 {
     //Got an initial scan laser, obtain its parametes
-    if (verbose)
-        ROS_INFO("[rf2o] Got first Laser Scan .... Configuring node");
-    width = last_scan.ranges.size();    // Num of samples (size) of the scan laser
+    ROS_INFO_COND(verbose, "[rf2o] Got first Laser Scan .... Configuring node");
+
+    width = scan.ranges.size();    // Num of samples (size) of the scan laser
 
     cols = width;						// Max reolution. Should be similar to the width parameter
     fovh = fabs(scan.angle_max - scan.angle_min); // Horizontal Laser's FOV
@@ -77,8 +77,8 @@ void CLaserOdometry2D::Init(const sensor_msgs::LaserScan& scan,
     //robotInitialPose.phi(yaw);
 
     //Set the initial pose
-    laser_pose = robotInitialPose + LaserPoseOnTheRobot;
-    laser_oldpose = robotInitialPose + LaserPoseOnTheRobot;
+    laser_pose = robotInitialPose + laser_pose_on_robot;
+    laser_oldpose = robotInitialPose + laser_pose_on_robot;
 
     // Init module (internal)
     //------------------------
@@ -240,8 +240,8 @@ void CLaserOdometry2D::odometryCalculation(const sensor_msgs::LaserScan& scan)
     }
 
     m_runtime = 1000*m_clock.Tac();
-    if (verbose)
-        ROS_INFO("[rf2o] execution time (ms): %f", m_runtime);
+
+    ROS_INFO_COND(verbose, "[rf2o] execution time (ms): %f", m_runtime);
 
     //Update poses
     PoseUpdate();
@@ -704,8 +704,7 @@ void CLaserOdometry2D::solveSystemNonLinear()
     cov_odo = (1.f/float(num_valid_range-3))*AtA.inverse()*res.squaredNorm();
     kai_loc_level = Var;
 
-    if (verbose)
-        std::cout << endl << "[rf2o] COV_ODO: " << cov_odo  << endl;
+    ROS_INFO_STREAM_COND(verbose, "[rf2o] COV_ODO: " << cov_odo);
 }
 
 void CLaserOdometry2D::Reset(mrpt::poses::CPose3D ini_pose, CObservation2DRangeScan scan)
@@ -723,7 +722,7 @@ void CLaserOdometry2D::Reset(mrpt::poses::CPose3D ini_pose, CObservation2DRangeS
 
 void CLaserOdometry2D::performWarping()
 {
-	Matrix3f acu_trans;
+  Eigen::Matrix3f acu_trans;
 
 	acu_trans.setIdentity();
 	for (unsigned int i=1; i<=level; i++)
@@ -804,11 +803,10 @@ void CLaserOdometry2D::filterLevelSolution()
 {
 	//		Calculate Eigenvalues and Eigenvectors
 	//----------------------------------------------------------
-	SelfAdjointEigenSolver<MatrixXf> eigensolver(cov_odo);
-	if (eigensolver.info() != Success)
+  Eigen::SelfAdjointEigenSolver<Eigen::MatrixXf> eigensolver(cov_odo);
+  if (eigensolver.info() != Eigen::Success)
 	{
-	    if (verbose)
-    		printf("[rf2o] ERROR: Eigensolver couldn't find a solution. Pose is not updated");
+    ROS_INFO_COND(verbose, "[rf2o] ERROR: Eigensolver couldn't find a solution. Pose is not updated");
 		return;
 	}
 
@@ -910,9 +908,9 @@ void CLaserOdometry2D::PoseUpdate()
 	//-------------------------------------------------------
 	laser_oldpose = laser_pose;
 
-	math::CMatrixDouble33 aux_acu = acu_trans;
-	poses::CPose2D pose_aux_2D(acu_trans(0,2), acu_trans(1,2), kai_loc(2)/fps);
-        laser_pose = laser_pose + CPose3D(pose_aux_2D);
+  mrpt::math::CMatrixDouble33 aux_acu = acu_trans;
+  mrpt::poses::CPose2D pose_aux_2D(acu_trans(0,2), acu_trans(1,2), kai_loc(2)/fps);
+        laser_pose = laser_pose + mrpt::poses::CPose3D(pose_aux_2D);
 
   last_increment = pose_aux_2D;
 
@@ -925,14 +923,11 @@ void CLaserOdometry2D::PoseUpdate()
 	kai_loc_old(1) = -kai_abs(0)*sin(phi) + kai_abs(1)*cos(phi);
 	kai_loc_old(2) = kai_abs(2);
 
-    if (verbose)
-        ROS_INFO("[rf2o] LASERodom = [%f %f %f]",laser_pose.x(),laser_pose.y(),laser_pose.yaw());
-
+    ROS_INFO_COND(verbose, "[rf2o] LASERodom = [%f %f %f]",laser_pose.x(),laser_pose.y(),laser_pose.yaw());
 
     //Compose Transformations
-    robot_pose = laser_pose + LaserPoseOnTheRobot_inv;
-    if (verbose)
-        ROS_INFO("BASEodom = [%f %f %f]",robot_pose.x(),robot_pose.y(),robot_pose.yaw());
+    robot_pose = laser_pose + laser_pose_on_robot_inv;
+    ROS_INFO_COND(verbose, "BASEodom = [%f %f %f]",robot_pose.x(),robot_pose.y(),robot_pose.yaw());
 
     // Estimate linear/angular speeds (mandatory for base_local_planner)
     // last_scan -> the last scan received
