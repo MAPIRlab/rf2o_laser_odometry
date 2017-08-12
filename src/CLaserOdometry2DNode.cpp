@@ -185,17 +185,17 @@ void CLaserOdometry2DNode::LaserCallBack(const sensor_msgs::LaserScan::ConstPtr&
         current_scan_time = last_scan.header.stamp;
 
         //Initialize module on first scan
-        if (first_laser_scan)
-        {
-            Init(last_scan, initial_robot_pose.pose.pose);
-            first_laser_scan = false;
-        }
-        else
+        if (!first_laser_scan)
         {
             //copy laser scan to internal variable
             for (unsigned int i = 0; i<width; i++)
                 range_wf(i) = new_scan->ranges[i];
             new_scan_available = true;
+        }
+        else
+        {
+          Init(last_scan, initial_robot_pose.pose.pose);
+          first_laser_scan = false;
         }
     }
 }
