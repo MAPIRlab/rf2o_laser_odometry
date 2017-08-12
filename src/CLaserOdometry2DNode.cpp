@@ -25,14 +25,14 @@ public:
   CLaserOdometry2DNode();
   ~CLaserOdometry2DNode();
 
-  void process();
+  void process(const ros::TimerEvent &);
   void publish();
 
   bool setLaserPoseFromTf();
 
 public:
 
-  bool verbose,publish_tf,new_scan_available;
+  bool publish_tf,new_scan_available;
 
   double freq;
 
@@ -79,7 +79,7 @@ CLaserOdometry2DNode::CLaserOdometry2DNode() :
 
     //Publishers and Subscribers
     //--------------------------
-    odom_pub = pn.advertise<nav_msgs::Odometry>(odom_topic, 5);
+    odom_pub  = pn.advertise<nav_msgs::Odometry>(odom_topic, 5);
     laser_sub = n.subscribe<sensor_msgs::LaserScan>(laser_scan_topic,1,&CLaserOdometry2DNode::LaserCallBack,this);
 
     //init pose??
@@ -104,7 +104,9 @@ CLaserOdometry2DNode::CLaserOdometry2DNode() :
 
     //Init variables
     module_initialized = false;
-    first_laser_scan = true;
+    first_laser_scan   = true;
+
+  ROS_INFO_STREAM("Listening laser scan from topic: " << laser_sub.getTopic());
 }
 
 CLaserOdometry2DNode::~CLaserOdometry2DNode()
@@ -155,7 +157,7 @@ bool CLaserOdometry2DNode::scan_available()
     return new_scan_available;
 }
 
-void CLaserOdometry2DNode::process()
+void CLaserOdometry2DNode::process(const ros::TimerEvent&)
 {
   if( is_initialized() && scan_available() )
   {
@@ -256,17 +258,18 @@ int main(int argc, char** argv)
 
     CLaserOdometry2DNode myLaserOdomNode;
 
-    //Main Loop
-    //----------
-    ROS_INFO("initialization complete...Looping");
-    ros::Rate loop_rate(myLaserOdomNode.freq);
-    while (ros::ok())
-    {
-        ros::spinOnce();        //Check for new laser scans
+    ros::TimerOptions timer_opt;
+    timer_opt.oneshot   = false;
+    timer_opt.autostart = true;
+    timer_opt.callback_queue = ros::getGlobalCallbackQueue();
+    timer_opt.tracked_object = ros::VoidConstPtr();
 
-        myLaserOdomNode.process();
+    timer_opt.callback = boost::bind(&CLaserOdometry2DNode::process, &myLaserOdomNode, _1);
+    timer_opt.period   = ros::Rate(myLaserOdomNode.freq).expectedCycleTime();
 
-        loop_rate.sleep();
-    }
-    return(0);
+    ros::Timer rf2o_timer = ros::NodeHandle("~").createTimer(timer_opt);
+
+    ros::spin();
+
+    return EXIT_SUCCESS;
 }
