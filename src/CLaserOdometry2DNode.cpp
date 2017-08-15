@@ -23,7 +23,7 @@ class CLaserOdometry2DNode : CLaserOdometry2D
 public:
 
   CLaserOdometry2DNode();
-  ~CLaserOdometry2DNode();
+  ~CLaserOdometry2DNode() = default;
 
   void process(const ros::TimerEvent &);
   void publish();
@@ -32,7 +32,7 @@ public:
 
 public:
 
-  bool publish_tf,new_scan_available;
+  bool publish_tf, new_scan_available;
 
   double freq;
 
@@ -109,11 +109,6 @@ CLaserOdometry2DNode::CLaserOdometry2DNode() :
   ROS_INFO_STREAM("Listening laser scan from topic: " << laser_sub.getTopic());
 }
 
-CLaserOdometry2DNode::~CLaserOdometry2DNode()
-{
-  //
-}
-
 bool CLaserOdometry2DNode::setLaserPoseFromTf()
 {
   bool retrieved = false;
@@ -134,18 +129,21 @@ bool CLaserOdometry2DNode::setLaserPoseFromTf()
       retrieved = false;
   }
 
-  //TF:transform -> mrpt::CPose3D (see mrpt-ros-bridge)
-  mrpt::poses::CPose3D laser_tf;
-  const tf::Vector3 &t = transform.getOrigin();
-  laser_tf.x() = t[0];
-  laser_tf.y() = t[1];
-  laser_tf.z() = t[2];
+  //TF:transform -> Eigen::Isometry3d
+
   const tf::Matrix3x3 &basis = transform.getBasis();
-  mrpt::math::CMatrixDouble33 R;
+  Eigen::Matrix3d R;
+
   for(int r = 0; r < 3; r++)
       for(int c = 0; c < 3; c++)
           R(r,c) = basis[r][c];
-  laser_tf.setRotationMatrix(R);
+
+  Pose3d laser_tf(R);
+
+  const tf::Vector3 &t = transform.getOrigin();
+  laser_tf.translation()(0) = t[0];
+  laser_tf.translation()(1) = t[1];
+  laser_tf.translation()(2) = t[2];
 
   setLaserPose(laser_tf);
 
@@ -194,7 +192,7 @@ void CLaserOdometry2DNode::LaserCallBack(const sensor_msgs::LaserScan::ConstPtr&
         }
         else
         {
-          Init(last_scan, initial_robot_pose.pose.pose);
+          init(last_scan, initial_robot_pose.pose.pose);
           first_laser_scan = false;
         }
     }
@@ -221,10 +219,10 @@ void CLaserOdometry2DNode::publish()
       odom_trans.header.stamp = ros::Time::now();
       odom_trans.header.frame_id = odom_frame_id;
       odom_trans.child_frame_id = base_frame_id;
-      odom_trans.transform.translation.x = robot_pose.x();
-      odom_trans.transform.translation.y = robot_pose.y();
+      odom_trans.transform.translation.x = robot_pose_.translation()(0);
+      odom_trans.transform.translation.y = robot_pose_.translation()(1);
       odom_trans.transform.translation.z = 0.0;
-      odom_trans.transform.rotation = tf::createQuaternionMsgFromYaw(robot_pose.yaw());
+      odom_trans.transform.rotation = tf::createQuaternionMsgFromYaw(rf2o::getYaw(robot_pose_.rotation()));
       //send the transform
       odom_broadcaster.sendTransform(odom_trans);
   }
@@ -236,10 +234,10 @@ void CLaserOdometry2DNode::publish()
   odom.header.stamp = ros::Time::now();
   odom.header.frame_id = odom_frame_id;
   //set the position
-  odom.pose.pose.position.x = robot_pose.x();
-  odom.pose.pose.position.y = robot_pose.y();
+  odom.pose.pose.position.x = robot_pose_.translation()(0);
+  odom.pose.pose.position.y = robot_pose_.translation()(1);
   odom.pose.pose.position.z = 0.0;
-  odom.pose.pose.orientation = tf::createQuaternionMsgFromYaw(robot_pose.yaw());
+  odom.pose.pose.orientation = tf::createQuaternionMsgFromYaw(rf2o::getYaw(robot_pose_.rotation()));
   //set the velocity
   odom.child_frame_id = base_frame_id;
   odom.twist.twist.linear.x = lin_speed;    //linear speed

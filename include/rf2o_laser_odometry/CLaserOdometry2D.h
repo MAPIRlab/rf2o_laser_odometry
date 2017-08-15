@@ -45,34 +45,71 @@
 
 #include <boost/bind.hpp>
 #include <Eigen/Dense>
+#include <Eigen/Geometry>
 #include <unsupported/Eigen/MatrixFunctions>
 #include <iostream>
 #include <fstream>
 #include <numeric>
 
+namespace rf2o {
+template <typename T>
+inline int sign(T x) { return x<0 ? -1:1; }
 
+template <typename Derived>
+inline typename Eigen::MatrixBase<Derived>::Scalar
+getYaw(const Eigen::MatrixBase<Derived>& r)
+{
+  return std::atan2( r(1, 0), r(0, 0) );
+}
+
+template<typename T>
+inline Eigen::Matrix<T, 3, 3> matrixRollPitchYaw(const T roll,
+                                                 const T pitch,
+                                                 const T yaw)
+{
+  const Eigen::AngleAxis<T> ax = Eigen::AngleAxis<T>(roll,  Eigen::Matrix<T, 3, 1>::UnitX());
+  const Eigen::AngleAxis<T> ay = Eigen::AngleAxis<T>(pitch, Eigen::Matrix<T, 3, 1>::UnitY());
+  const Eigen::AngleAxis<T> az = Eigen::AngleAxis<T>(yaw,   Eigen::Matrix<T, 3, 1>::UnitZ());
+
+  return (az * ay * ax).toRotationMatrix().matrix();
+}
+
+template<typename T>
+inline Eigen::Matrix<T, 3, 3> matrixYaw(const T yaw)
+{
+  return matrixRollPitchYaw<T>(0, 0, yaw);
+}
+} // namespace rf2o
 
 class CLaserOdometry2D
 {
 public:
-	CLaserOdometry2D();
-    ~CLaserOdometry2D();
 
-    void Init(const sensor_msgs::LaserScan& scan,
+  using Scalar = float;
+
+  using Pose2d = Eigen::Isometry2d;
+  using Pose3d = Eigen::Isometry3d;
+  using MatrixF31 = Eigen::Matrix<Scalar, 3, 1>;
+  using IncrementCov = Eigen::Matrix<Scalar, 3, 3>;
+
+	CLaserOdometry2D();
+    virtual ~CLaserOdometry2D() = default;
+
+    void init(const sensor_msgs::LaserScan& scan,
               const geometry_msgs::Pose& initial_robot_pose);
 
     bool is_initialized();
 
-    void odometryCalculation(const sensor_msgs::LaserScan& scan);
+    bool odometryCalculation(const sensor_msgs::LaserScan& scan);
 
-    void setLaserPose(const mrpt::poses::CPose3D& laser_pose);
+    void setLaserPose(const Pose3d& laser_pose);
 
-    const mrpt::poses::CPose3D& getIncrement() const;
+    const Pose3d& getIncrement() const;
 
-    const Eigen::Matrix<float, 3, 3>& getIncrementCovariance() const;
+    const IncrementCov& getIncrementCovariance() const;
 
-    mrpt::poses::CPose3D& getPose();
-    const mrpt::poses::CPose3D& getPose() const;
+    Pose3d& getPose();
+    const Pose3d& getPose() const;
 
 protected:
 
@@ -132,15 +169,14 @@ protected:
 	mrpt::math::CMatrixFloat31 kai_loc_old;
 	mrpt::math::CMatrixFloat31 kai_loc_level;
 
-  mrpt::poses::CPose3D last_increment;
+  Pose3d last_increment_;
+  Pose3d laser_pose_on_robot_;
+  Pose3d laser_pose_on_robot_inv_;
+  Pose3d laser_pose_;
+  Pose3d laser_oldpose_;
+  Pose3d robot_pose_;
+  Pose3d robot_oldpose_;
 
-  mrpt::poses::CPose3D laser_pose_on_robot;
-  mrpt::poses::CPose3D laser_pose_on_robot_inv;
-
-  mrpt::poses::CPose3D laser_pose;
-	mrpt::poses::CPose3D laser_oldpose;
-    mrpt::poses::CPose3D robot_pose;
-    mrpt::poses::CPose3D robot_oldpose;
 	bool test;
     std::vector<double> last_m_lin_speeds;
     std::vector<double> last_m_ang_speeds;
@@ -158,7 +194,7 @@ protected:
     void solveSystemNonLinear();
 	void filterLevelSolution();
 	void PoseUpdate();
-    void Reset(mrpt::poses::CPose3D ini_pose, CObservation2DRangeScan scan);
+    void Reset(const Pose3d& ini_pose, CObservation2DRangeScan scan);
 };
 
 #endif

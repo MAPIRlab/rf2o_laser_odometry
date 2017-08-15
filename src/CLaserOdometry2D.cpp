@@ -26,19 +26,12 @@ CLaserOdometry2D::CLaserOdometry2D() :
   //
 }
 
-
-CLaserOdometry2D::~CLaserOdometry2D()
-{
-  //
-}
-
-void CLaserOdometry2D::setLaserPose(const mrpt::poses::CPose3D& laser_pose)
+void CLaserOdometry2D::setLaserPose(const Pose3d& laser_pose)
 {
   //Set laser pose on the robot
 
-  laser_pose_on_robot = laser_pose;
-  laser_pose_on_robot_inv = laser_pose_on_robot;
-  laser_pose_on_robot_inv.inverse();
+  laser_pose_on_robot_ = laser_pose;
+  laser_pose_on_robot_inv_ = laser_pose_on_robot_.inverse();
 }
 
 bool CLaserOdometry2D::is_initialized()
@@ -46,7 +39,7 @@ bool CLaserOdometry2D::is_initialized()
     return module_initialized;
 }
 
-void CLaserOdometry2D::Init(const sensor_msgs::LaserScan& scan,
+void CLaserOdometry2D::init(const sensor_msgs::LaserScan& scan,
                             const geometry_msgs::Pose& initial_robot_pose)
 {
     //Got an initial scan laser, obtain its parametes
@@ -59,26 +52,20 @@ void CLaserOdometry2D::Init(const sensor_msgs::LaserScan& scan,
     ctf_levels = 5;                     // Coarse-to-Fine levels
     iter_irls = 5;                      //Num iterations to solve iterative reweighted least squares
 
-    //Robot initial pose (see MQTT:bridge)
-    mrpt::poses::CPose3D robotInitialPose;
-    geometry_msgs::Pose _src = initial_robot_pose;
+    Pose3d robotInitialPose = Pose3d::Identity();
+    const geometry_msgs::Pose _src = initial_robot_pose;
 
-    robotInitialPose.x(_src.position.x);
-    robotInitialPose.y(_src.position.y);
+    robotInitialPose = Eigen::Quaterniond(_src.orientation.w,
+                                          _src.orientation.x,
+                                          _src.orientation.y,
+                                          _src.orientation.z);
 
-    mrpt::math::CQuaternionDouble quat;
-    quat.x(_src.orientation.x);
-    quat.y(_src.orientation.y);
-    quat.z(_src.orientation.z);
-    quat.r(_src.orientation.w);
-    double roll, pitch, yaw;
-    quat.rpy(roll, pitch, yaw);
-    robotInitialPose.setYawPitchRoll(yaw,pitch,roll);
-    //robotInitialPose.phi(yaw);
+    robotInitialPose.translation()(0) = _src.position.x;
+    robotInitialPose.translation()(1) = _src.position.y;
 
     //Set the initial pose
-    laser_pose = robotInitialPose + laser_pose_on_robot;
-    laser_oldpose = robotInitialPose + laser_pose_on_robot;
+    laser_pose_    = robotInitialPose * laser_pose_on_robot_;
+    laser_oldpose_ = laser_oldpose_;
 
     // Init module (internal)
     //------------------------
@@ -91,7 +78,7 @@ void CLaserOdometry2D::Init(const sensor_msgs::LaserScan& scan,
 
     //Resize pyramid
     unsigned int s, cols_i;
-    const unsigned int pyr_levels = round(log2(round(float(width) / float(cols)))) + ctf_levels;
+    const unsigned int pyr_levels = std::round(std::log2(round(float(width) / float(cols)))) + ctf_levels;
     range.resize(pyr_levels);
     range_old.resize(pyr_levels);
     range_inter.resize(pyr_levels);
@@ -158,9 +145,9 @@ void CLaserOdometry2D::Init(const sensor_msgs::LaserScan& scan,
     last_odom_time = ros::Time::now();
 }
 
-const mrpt::poses::CPose3D& CLaserOdometry2D::getIncrement() const
+const CLaserOdometry2D::Pose3d& CLaserOdometry2D::getIncrement() const
 {
-  return last_increment;
+  return last_increment_;
 }
 
 const Eigen::Matrix<float, 3, 3>& CLaserOdometry2D::getIncrementCovariance() const
@@ -168,17 +155,17 @@ const Eigen::Matrix<float, 3, 3>& CLaserOdometry2D::getIncrementCovariance() con
   return cov_odo;
 }
 
-mrpt::poses::CPose3D& CLaserOdometry2D::getPose()
+CLaserOdometry2D::Pose3d& CLaserOdometry2D::getPose()
 {
-  return robot_pose;
+  return robot_pose_;
 }
 
-const mrpt::poses::CPose3D& CLaserOdometry2D::getPose() const
+const CLaserOdometry2D::Pose3d& CLaserOdometry2D::getPose() const
 {
-  return robot_pose;
+  return robot_pose_;
 }
 
-void CLaserOdometry2D::odometryCalculation(const sensor_msgs::LaserScan& scan)
+bool CLaserOdometry2D::odometryCalculation(const sensor_msgs::LaserScan& scan)
 {
     //==================================================================================
     //						DIFERENTIAL  ODOMETRY  MULTILEVEL
@@ -198,9 +185,9 @@ void CLaserOdometry2D::odometryCalculation(const sensor_msgs::LaserScan& scan)
         transformations[i].setIdentity();
 
         level = i;
-        unsigned int s = pow(2.f,int(ctf_levels-(i+1)));
-        cols_i = ceil(float(cols)/float(s));
-        image_level = ctf_levels - i + round(log2(round(float(width)/float(cols)))) - 1;
+        unsigned int s = std::pow(2.f,int(ctf_levels-(i+1)));
+        cols_i = std::ceil(float(cols)/float(s));
+        image_level = ctf_levels - i + std::round(std::log2(std::round(float(width)/float(cols)))) - 1;
 
         //1. Perform warping
         if (i == 0)
@@ -244,6 +231,8 @@ void CLaserOdometry2D::odometryCalculation(const sensor_msgs::LaserScan& scan)
 
     //Update poses
     PoseUpdate();
+
+    return true;
 }
 
 
@@ -259,13 +248,13 @@ void CLaserOdometry2D::createImagePyramid()
     //The number of levels of the pyramid does not match the number of levels used
     //in the odometry computation (because we sometimes want to finish with lower resolutions)
 
-    unsigned int pyr_levels = round(log2(round(float(width)/float(cols)))) + ctf_levels;
+    unsigned int pyr_levels = std::round(std::log2(std::round(float(width)/float(cols)))) + ctf_levels;
 
     //Generate levels
     for (unsigned int i = 0; i<pyr_levels; i++)
     {
-        unsigned int s = pow(2.f,int(i));
-        cols_i = ceil(float(width)/float(s));
+        unsigned int s = std::pow(2.f,int(i));
+        cols_i = std::ceil(float(width)/float(s));
 
 		const unsigned int i_1 = i-1;
 
@@ -286,7 +275,7 @@ void CLaserOdometry2D::createImagePyramid()
 
 						for (int l=-2; l<3; l++)
 						{
-							const float abs_dif = abs(range_wf(u+l)-dcenter);
+              const float abs_dif = std::abs(range_wf(u+l)-dcenter);
 							if (abs_dif < max_range_dif)
 							{
 								const float aux_w = g_mask[2+l]*(max_range_dif - abs_dif);
@@ -314,7 +303,7 @@ void CLaserOdometry2D::createImagePyramid()
 							const int indu = u+l;
 							if ((indu>=0)&&(indu<cols_i))
 							{
-								const float abs_dif = abs(range_wf(indu)-dcenter);
+                const float abs_dif = std::abs(range_wf(indu)-dcenter);
 								if (abs_dif < max_range_dif)
 								{
 									const float aux_w = g_mask[2+l]*(max_range_dif - abs_dif);
@@ -351,7 +340,7 @@ void CLaserOdometry2D::createImagePyramid()
 
 						for (int l=-2; l<3; l++)
 						{
-							const float abs_dif = abs(range[i_1](u2+l)-dcenter);
+              const float abs_dif = std::abs(range[i_1](u2+l)-dcenter);
 							if (abs_dif < max_range_dif)
 							{
 								const float aux_w = g_mask[2+l]*(max_range_dif - abs_dif);
@@ -381,7 +370,7 @@ void CLaserOdometry2D::createImagePyramid()
 							const int indu = u2+l;
 							if ((indu>=0)&&(indu<cols_i2))
 							{
-								const float abs_dif = abs(range[i_1](indu)-dcenter);
+                const float abs_dif = std::abs(range[i_1](indu)-dcenter);
 								if (abs_dif < max_range_dif)
 								{
 									const float aux_w = g_mask[2+l]*(max_range_dif - abs_dif);
@@ -405,8 +394,8 @@ void CLaserOdometry2D::createImagePyramid()
             if (range[i](u) > 0.f)
 			{
 				const float tita = -0.5*fovh + float(u)*fovh/float(cols_i-1);
-				xx[i](u) = range[i](u)*cos(tita);
-				yy[i](u) = range[i](u)*sin(tita);
+        xx[i](u) = range[i](u)*std::cos(tita);
+        yy[i](u) = range[i](u)*std::sin(tita);
 			}
 			else
 			{
@@ -449,15 +438,21 @@ void CLaserOdometry2D::calculaterangeDerivativesSurface()
 
 	for (unsigned int u = 0; u < cols_i-1; u++)
     {
-    const float dist = mrpt::math::square(xx_inter[image_level](u+1) - xx_inter[image_level](u))
-              + mrpt::math::square(yy_inter[image_level](u+1) - yy_inter[image_level](u));
+    float dista = xx_inter[image_level](u+1) - xx_inter[image_level](u);
+    dista *= dista;
+    float distb = yy_inter[image_level](u+1) - yy_inter[image_level](u);
+    distb *= distb;
+    const float dist = dista + distb;
+
 		if (dist  > 0.f)
-			rtita(u) = sqrt(dist);
+      rtita(u) = std::sqrt(dist);
 	}
 
     //Spatial derivatives
     for (unsigned int u = 1; u < cols_i-1; u++)
-		dtita(u) = (rtita(u-1)*(range_inter[image_level](u+1)-range_inter[image_level](u)) + rtita(u)*(range_inter[image_level](u) - range_inter[image_level](u-1)))/(rtita(u)+rtita(u-1));
+    dtita(u) = (rtita(u-1)*(range_inter[image_level](u+1)-
+                range_inter[image_level](u)) + rtita(u)*(range_inter[image_level](u) -
+                range_inter[image_level](u-1)))/(rtita(u)+rtita(u-1));
 
 	dtita(0) = dtita(1);
 	dtita(cols_i-1) = dtita(cols_i-2);
@@ -503,7 +498,7 @@ void CLaserOdometry2D::computeNormals()
 		if (null(u) == 0.f)
 		{
 			const float tita = -0.5f*fovh + float(u)*incr_tita;
-			const float alfa = -atan2(2.f*dtita(u), 2.f*range[image_level](u)*incr_tita);
+      const float alfa = -std::atan2(2.f*dtita(u), 2.f*range[image_level](u)*incr_tita);
 			norm_ang(u) = tita + alfa;
 			if (norm_ang(u) < -M_PI)
 				norm_ang(u) += 2.f*M_PI;
@@ -512,8 +507,8 @@ void CLaserOdometry2D::computeNormals()
 			else if (norm_ang(u) > M_PI)
 				norm_ang(u) -= M_PI;
 
-			normx(u) = cos(tita + alfa);
-			normy(u) = sin(tita + alfa);
+      normx(u) = std::cos(tita + alfa);
+      normy(u) = std::sin(tita + alfa);
 		}
 	}
 }
@@ -526,7 +521,7 @@ void CLaserOdometry2D::computeWeights()
 
 	//Parameters for error_linearization
 	const float kdtita = 1.f;
-  const float kdt = kdtita/mrpt::math::square(fps);
+  const float kdt = kdtita / (fps*fps);
 	const float k2d = 0.2f;
 
 	for (unsigned int u = 1; u < cols_i-1; u++)
@@ -540,9 +535,11 @@ void CLaserOdometry2D::computeWeights()
 			const float dtitat = ini_dtita - final_dtita;
 			const float dtita2 = dtita(u+1) - dtita(u-1);
 
-      const float w_der = kdt*mrpt::math::square(dt(u)) + kdtita*mrpt::math::square(dtita(u)) + k2d*(abs(dtitat) + abs(dtita2));
+      const float w_der = kdt*(dt(u)*dt(u)) +
+                           kdtita*(dtita(u)*dtita(u)) +
+                            k2d*(std::abs(dtitat) + std::abs(dtita2));
 
-			weights(u) = sqrt(1.f/w_der);
+      weights(u) = std::sqrt(1.f/w_der);
 		}
 
 	const float inv_max = 1.f/weights.maximum();
@@ -587,10 +584,10 @@ void CLaserOdometry2D::solveSystemOneLevel()
 			const float tita = -0.5*fovh + u/kdtita;
 
 			//Fill the matrix A
-			A(cont, 0) = tw*(cos(tita) + dtita(u)*kdtita*sin(tita)/range_inter[image_level](u));
-			A(cont, 1) = tw*(sin(tita) - dtita(u)*kdtita*cos(tita)/range_inter[image_level](u));
-			A(cont, 2) = tw*(-yy[image_level](u)*cos(tita) + xx[image_level](u)*sin(tita) - dtita(u)*kdtita);
-			B(cont,0) = tw*(-dt(u));
+      A(cont, 0) = tw*(std::cos(tita) + dtita(u)*kdtita*std::sin(tita)/range_inter[image_level](u));
+      A(cont, 1) = tw*(std::sin(tita) - dtita(u)*kdtita*std::cos(tita)/range_inter[image_level](u));
+      A(cont, 2) = tw*(-yy[image_level](u)*std::cos(tita) + xx[image_level](u)*std::sin(tita) - dtita(u)*kdtita);
+      B(cont, 0) = tw*(-dt(u));
 
 			cont++;
 		}
@@ -629,10 +626,10 @@ void CLaserOdometry2D::solveSystemNonLinear()
             const float tita = -0.5*fovh + u/kdtita;
 
             //Fill the matrix A
-            A(cont, 0) = tw*(cos(tita) + dtita(u)*kdtita*sin(tita)/range_inter[image_level](u));
-            A(cont, 1) = tw*(sin(tita) - dtita(u)*kdtita*cos(tita)/range_inter[image_level](u));
-            A(cont, 2) = tw*(-yy[image_level](u)*cos(tita) + xx[image_level](u)*sin(tita) - dtita(u)*kdtita);
-            B(cont,0) = tw*(-dt(u));
+            A(cont, 0) = tw*(std::cos(tita) + dtita(u)*kdtita*std::sin(tita)/range_inter[image_level](u));
+            A(cont, 1) = tw*(std::sin(tita) - dtita(u)*kdtita*std::cos(tita)/range_inter[image_level](u));
+            A(cont, 2) = tw*(-yy[image_level](u)*std::cos(tita) + xx[image_level](u)*std::sin(tita) - dtita(u)*kdtita);
+            B(cont, 0) = tw*(-dt(u));
 
             cont++;
         }
@@ -655,8 +652,8 @@ void CLaserOdometry2D::solveSystemNonLinear()
     for (unsigned int u = 1; u < cols_i-1; u++)
         if (null(u) == 0)
         {
-            aver_dt += fabsf(dt(u));
-            aver_res += fabsf(res(ind++));
+            aver_dt  += std::abs(dt(u));
+            aver_res += std::abs(res(ind++));
         }
     aver_dt /= cont; aver_res /= cont;
 //    printf("\n Aver dt = %f, aver res = %f", aver_dt, aver_res);
@@ -677,13 +674,13 @@ void CLaserOdometry2D::solveSystemNonLinear()
         for (unsigned int u = 1; u < cols_i-1; u++)
             if (null(u) == 0)
             {
-                const float res_weight = sqrt(1.f/(1.f + mrpt::math::square(k*res(cont))));
+                const float res_weight = std::sqrt(1.f/(1.f + ((k*res(cont))*(k*res(cont)))));
 
                 //Fill the matrix Aw
                 Aw(cont,0) = res_weight*A(cont,0);
                 Aw(cont,1) = res_weight*A(cont,1);
                 Aw(cont,2) = res_weight*A(cont,2);
-                Bw(cont) = res_weight*B(cont);
+                Bw(cont)   = res_weight*B(cont);
                 cont++;
             }
 
@@ -706,11 +703,11 @@ void CLaserOdometry2D::solveSystemNonLinear()
     ROS_INFO_STREAM_COND(verbose, "[rf2o] COV_ODO: " << cov_odo);
 }
 
-void CLaserOdometry2D::Reset(mrpt::poses::CPose3D ini_pose, CObservation2DRangeScan scan)
+void CLaserOdometry2D::Reset(const Pose3d& ini_pose, CObservation2DRangeScan scan)
 {
 	//Set the initial pose
-	laser_pose = ini_pose;
-	laser_oldpose = ini_pose;
+  laser_pose_ = ini_pose;
+  laser_oldpose_ = ini_pose;
 
     //readLaser(scan);
 	createImagePyramid();
@@ -741,8 +738,8 @@ void CLaserOdometry2D::performWarping()
 			//Transform point to the warped reference frame
 			const float x_w = acu_trans(0,0)*xx[image_level](j) + acu_trans(0,1)*yy[image_level](j) + acu_trans(0,2);
 			const float y_w = acu_trans(1,0)*xx[image_level](j) + acu_trans(1,1)*yy[image_level](j) + acu_trans(1,2);
-			const float tita_w = atan2(y_w, x_w);
-			const float range_w = sqrt(x_w*x_w + y_w*y_w);
+      const float tita_w = std::atan2(y_w, x_w);
+      const float range_w = std::sqrt(x_w*x_w + y_w*y_w);
 
 			//Calculate warping
 			const float uwarp = kdtita*(tita_w + 0.5*fovh);
@@ -756,18 +753,18 @@ void CLaserOdometry2D::performWarping()
 				const float delta_l = uwarp - float(uwarp_l);
 
 				//Very close pixel
-				if (abs(round(uwarp) - uwarp) < 0.05f)
+        if (std::abs(std::round(uwarp) - uwarp) < 0.05f)
 				{
 					range_warped[image_level](round(uwarp)) += range_w;
-					wacu(round(uwarp)) += 1.f;
+          wacu(std::round(uwarp)) += 1.f;
 				}
 				else
 				{
-          const float w_r = mrpt::math::square(delta_l);
+          const float w_r = delta_l*delta_l;
 					range_warped[image_level](uwarp_r) += w_r*range_w;
 					wacu(uwarp_r) += w_r;
 
-          const float w_l = mrpt::math::square(delta_r);
+          const float w_l = delta_r*delta_r;
 					range_warped[image_level](uwarp_l) += w_l*range_w;
 					wacu(uwarp_l) += w_l;
 				}
@@ -782,8 +779,8 @@ void CLaserOdometry2D::performWarping()
 		{
 			const float tita = -0.5f*fovh + float(u)/kdtita;
 			range_warped[image_level](u) /= wacu(u);
-			xx_warped[image_level](u) = range_warped[image_level](u)*cos(tita);
-			yy_warped[image_level](u) = range_warped[image_level](u)*sin(tita);
+      xx_warped[image_level](u) = range_warped[image_level](u)*std::cos(tita);
+      yy_warped[image_level](u) = range_warped[image_level](u)*std::sin(tita);
 		}
 		else
 		{
@@ -833,11 +830,7 @@ void CLaserOdometry2D::filterLevelSolution()
 		kai_loc_sub(2) = 0.f;
     else
     {
-#if MRPT_VERSION>=0x130
-        kai_loc_sub(2) = -fps*acos(acu_trans(0,0))*mrpt::utils::sign(acu_trans(1,0));
-#else
-        kai_loc_sub(2) = -fps*acos(acu_trans(0,0))*mrpt::math::sign(acu_trans(1,0));
-#endif
+      kai_loc_sub(2) = -fps*std::acos(acu_trans(0,0))*rf2o::sign(acu_trans(1,0));
     }
 	kai_loc_sub += kai_loc_old;
 
@@ -845,7 +838,8 @@ void CLaserOdometry2D::filterLevelSolution()
 	kai_b_old = Bii.colPivHouseholderQr().solve(kai_loc_sub);
 
 	//Filter speed
-	const float cf = 15e3f*expf(-int(level)), df = 0.05f*expf(-int(level));
+  const float cf = 15e3f*std::exp(-float(int(level))),
+              df = 0.05f*std::exp(-float(int(level)));
 
   Eigen::Matrix<float,3,1> kai_b_fil;
 	for (unsigned int i=0; i<3; i++)
@@ -861,10 +855,10 @@ void CLaserOdometry2D::filterLevelSolution()
 	const float incrx = kai_loc_fil(0)/fps;
 	const float incry = kai_loc_fil(1)/fps;
 	const float rot = kai_loc_fil(2)/fps;
-	transformations[level](0,0) = cos(rot);
-	transformations[level](0,1) = -sin(rot);
-	transformations[level](1,0) = sin(rot);
-	transformations[level](1,1) = cos(rot);
+  transformations[level](0,0) = std::cos(rot);
+  transformations[level](0,1) = -std::sin(rot);
+  transformations[level](1,0) = std::sin(rot);
+  transformations[level](1,1) = std::cos(rot);
 	transformations[level](0,2) = incrx;
 	transformations[level](1,2) = incry;
 }
@@ -888,45 +882,53 @@ void CLaserOdometry2D::PoseUpdate()
 		kai_loc(2) = 0.f;
 	else
     {
-#if MRPT_VERSION>=0x130
-    kai_loc(2) = fps*acos(acu_trans(0,0))*mrpt::utils::sign(acu_trans(1,0));
-#else
-    kai_loc(2) = fps*acos(acu_trans(0,0))*mrpt::math::sign(acu_trans(1,0));
-#endif
+      kai_loc(2) = fps*acos(acu_trans(0,0))*rf2o::sign(acu_trans(1,0));
     }
 	//cout << endl << "Arc cos (incr tita): " << kai_loc(2);
 
-	float phi = laser_pose.yaw();
+  float phi = rf2o::getYaw(laser_pose_.rotation());
 
-	kai_abs(0) = kai_loc(0)*cos(phi) - kai_loc(1)*sin(phi);
-	kai_abs(1) = kai_loc(0)*sin(phi) + kai_loc(1)*cos(phi);
+  kai_abs(0) = kai_loc(0)*std::cos(phi) - kai_loc(1)*std::sin(phi);
+  kai_abs(1) = kai_loc(0)*std::sin(phi) + kai_loc(1)*std::cos(phi);
 	kai_abs(2) = kai_loc(2);
 
 
 	//						Update poses
 	//-------------------------------------------------------
-	laser_oldpose = laser_pose;
+  laser_oldpose_ = laser_pose_;
 
   mrpt::math::CMatrixDouble33 aux_acu = acu_trans;
-  mrpt::poses::CPose2D pose_aux_2D(acu_trans(0,2), acu_trans(1,2), kai_loc(2)/fps);
-        laser_pose = laser_pose + mrpt::poses::CPose3D(pose_aux_2D);
+  Pose3d pose_aux_2D = Pose3d::Identity();
 
-  last_increment = pose_aux_2D;
+  pose_aux_2D = rf2o::matrixYaw(double(kai_loc(2)/fps));
+  pose_aux_2D.translation()(0) = acu_trans(0,2);
+  pose_aux_2D.translation()(1) = acu_trans(1,2);
+
+  laser_pose_ = laser_pose_ * pose_aux_2D;
+
+  last_increment_ = pose_aux_2D;
 
 
 
 	//				Compute kai_loc_old
 	//-------------------------------------------------------
-	phi = laser_pose.yaw();
-	kai_loc_old(0) = kai_abs(0)*cos(phi) + kai_abs(1)*sin(phi);
-	kai_loc_old(1) = -kai_abs(0)*sin(phi) + kai_abs(1)*cos(phi);
-	kai_loc_old(2) = kai_abs(2);
+  phi = rf2o::getYaw(laser_pose_.rotation());
+  kai_loc_old(0) =  kai_abs(0)*std::cos(phi) + kai_abs(1)*std::sin(phi);
+  kai_loc_old(1) = -kai_abs(0)*std::sin(phi) + kai_abs(1)*std::cos(phi);
+  kai_loc_old(2) =  kai_abs(2);
 
-    ROS_INFO_COND(verbose, "[rf2o] LASERodom = [%f %f %f]",laser_pose.x(),laser_pose.y(),laser_pose.yaw());
+    ROS_INFO_COND(verbose, "[rf2o] LASERodom = [%f %f %f]",
+                  laser_pose_.translation()(0),
+                  laser_pose_.translation()(1),
+                  0/*TODOlaser_pose_.rotation()*/);
 
     //Compose Transformations
-    robot_pose = laser_pose + laser_pose_on_robot_inv;
-    ROS_INFO_COND(verbose, "BASEodom = [%f %f %f]",robot_pose.x(),robot_pose.y(),robot_pose.yaw());
+    robot_pose_ = laser_pose_ * laser_pose_on_robot_inv_;
+
+    ROS_INFO_COND(verbose, "BASEodom = [%f %f %f]",
+                  robot_pose_.translation()(0),
+                  robot_pose_.translation()(1),
+                  0/*TODOrobot_pose_.rotation()*/);
 
     // Estimate linear/angular speeds (mandatory for base_local_planner)
     // last_scan -> the last scan received
@@ -936,13 +938,17 @@ void CLaserOdometry2D::PoseUpdate()
     last_odom_time = current_scan_time;
     lin_speed = acu_trans(0,2) / time_inc_sec;
     //double lin_speed = sqrt( mrpt::math::square(robot_oldpose.x()-robot_pose.x()) + mrpt::math::square(robot_oldpose.y()-robot_pose.y()) )/time_inc_sec;
-    double ang_inc = robot_pose.yaw() - robot_oldpose.yaw();
+
+    double ang_inc = rf2o::getYaw(robot_pose_.rotation()) -
+                     rf2o::getYaw(robot_oldpose_.rotation());
+
     if (ang_inc > 3.14159)
         ang_inc -= 2*3.14159;
     if (ang_inc < -3.14159)
         ang_inc += 2*3.14159;
+
     ang_speed = ang_inc/time_inc_sec;
-    robot_oldpose = robot_pose;
+    robot_oldpose_ = robot_pose_;
 
     //filter speeds
     /*
