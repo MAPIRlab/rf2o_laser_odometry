@@ -24,15 +24,14 @@
   <build_depend>tf</build_depend>
   <build_depend>cmake_modules</build_depend>   <!-- A common repository for CMake Modules which are not distributed with CMake but are commonly used by ROS packages. -->
                                                <!-- https://github.com/ros/cmake_modules/blob/0.3-devel/README.md -->
-  <build_depend>mrpt</build_depend>            <!-- Depend on mrpt system pkgs: http://www.mrpt.org/ -->
-
+  <build_depend>eigen</build_depend>
 
   <run_depend>nav_msgs</run_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>sensor_msgs</run_depend>
   <run_depend>std_msgs</run_depend>
   <run_depend>tf</run_depend>
-  <run_depend>cmake_modules</run_depend>       <!-- For aditional dependencies such as Eigen -->
-  <run_depend>mrpt</run_depend>                <!-- Depend on mrpt system pkgs -->
+  <run_depend>cmake_modules</run_depend>   <!-- For aditional dependencies such as Eigen -->
+  <run_depend>eigen</run_depend>
 
 </package>
