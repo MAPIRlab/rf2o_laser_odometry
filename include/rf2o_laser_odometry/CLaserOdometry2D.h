@@ -89,7 +89,7 @@ public:
 
   using Pose2d = Eigen::Isometry2d;
   using Pose3d = Eigen::Isometry3d;
-  using MatrixF31 = Eigen::Matrix<Scalar, 3, 1>;
+  using MatrixS31 = Eigen::Matrix<Scalar, 3, 1>;
   using IncrementCov = Eigen::Matrix<Scalar, 3, 3>;
 
 	CLaserOdometry2D();
@@ -140,8 +140,9 @@ protected:
 
     Eigen::MatrixXf A,Aw;
     Eigen::MatrixXf B,Bw;
-	Eigen::Matrix<float, 3, 1> Var;	//3 unknowns: vx, vy, w
-	Eigen::Matrix<float, 3, 3> cov_odo;
+
+  MatrixS31 Var;	//3 unknowns: vx, vy, w
+  IncrementCov cov_odo;
 
 
 
@@ -164,10 +165,10 @@ protected:
 	float		m_runtime;
     ros::Time last_odom_time, current_scan_time;
 
-	mrpt::math::CMatrixFloat31 kai_abs;
-	mrpt::math::CMatrixFloat31 kai_loc;
-	mrpt::math::CMatrixFloat31 kai_loc_old;
-	mrpt::math::CMatrixFloat31 kai_loc_level;
+  MatrixS31 kai_abs_;
+  MatrixS31 kai_loc_;
+  MatrixS31 kai_loc_old_;
+  MatrixS31 kai_loc_level_;
 
   Pose3d last_increment_;
   Pose3d laser_pose_on_robot_;

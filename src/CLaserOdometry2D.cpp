@@ -138,8 +138,8 @@ void CLaserOdometry2D::init(const sensor_msgs::LaserScan& scan,
     //Compute gaussian mask
     g_mask[0] = 1.f / 16.f; g_mask[1] = 0.25f; g_mask[2] = 6.f / 16.f; g_mask[3] = g_mask[1]; g_mask[4] = g_mask[0];
 
-    kai_abs.assign(0.f);
-    kai_loc_old.assign(0.f);
+    kai_abs_ = MatrixS31::Zero();
+    kai_loc_old_ = MatrixS31::Zero();
 
     module_initialized = true;
     last_odom_time = ros::Time::now();
@@ -603,7 +603,7 @@ void CLaserOdometry2D::solveSystemOneLevel()
 	res = A*Var - B;
 	cov_odo = (1.f/float(num_valid_range-3))*AtA.inverse()*res.squaredNorm();
 
-	kai_loc_level = Var;
+  kai_loc_level_ = Var;
 }
 
 
@@ -698,9 +698,9 @@ void CLaserOdometry2D::solveSystemNonLinear()
     }
 
     cov_odo = (1.f/float(num_valid_range-3))*AtA.inverse()*res.squaredNorm();
-    kai_loc_level = Var;
+    kai_loc_level_ = Var;
 
-    ROS_INFO_STREAM_COND(verbose, "[rf2o] COV_ODO: " << cov_odo);
+    ROS_INFO_STREAM_COND(verbose, "[rf2o] COV_ODO:\n" << cov_odo);
 }
 
 void CLaserOdometry2D::Reset(const Pose3d& ini_pose, CObservation2DRangeScan scan)
@@ -812,11 +812,11 @@ void CLaserOdometry2D::filterLevelSolution()
   Eigen::Matrix<float,3,1> kai_b;
 	Bii = eigensolver.eigenvectors();
 
-	kai_b = Bii.colPivHouseholderQr().solve(kai_loc_level);
+  kai_b = Bii.colPivHouseholderQr().solve(kai_loc_level_);
 
 	//Second, we have to describe both the old linear and angular speeds in the "eigenvector" basis too
 	//-------------------------------------------------------------------------------------------------
-  mrpt::math::CMatrixFloat31 kai_loc_sub;
+  MatrixS31 kai_loc_sub;
 
 	//Important: we have to substract the solutions from previous levels
   Eigen::Matrix3f acu_trans;
@@ -832,7 +832,7 @@ void CLaserOdometry2D::filterLevelSolution()
     {
       kai_loc_sub(2) = -fps*std::acos(acu_trans(0,0))*rf2o::sign(acu_trans(1,0));
     }
-	kai_loc_sub += kai_loc_old;
+  kai_loc_sub += kai_loc_old_;
 
   Eigen::Matrix<float,3,1> kai_b_old;
 	kai_b_old = Bii.colPivHouseholderQr().solve(kai_loc_sub);
@@ -876,21 +876,21 @@ void CLaserOdometry2D::PoseUpdate()
 
 	//				Compute kai_loc and kai_abs
 	//--------------------------------------------------------
-	kai_loc(0) = fps*acu_trans(0,2);
-	kai_loc(1) = fps*acu_trans(1,2);
+  kai_loc_(0) = fps*acu_trans(0,2);
+  kai_loc_(1) = fps*acu_trans(1,2);
 	if (acu_trans(0,0) > 1.f)
-		kai_loc(2) = 0.f;
+    kai_loc_(2) = 0.f;
 	else
     {
-      kai_loc(2) = fps*acos(acu_trans(0,0))*rf2o::sign(acu_trans(1,0));
+      kai_loc_(2) = fps*std::acos(acu_trans(0,0))*rf2o::sign(acu_trans(1,0));
     }
-	//cout << endl << "Arc cos (incr tita): " << kai_loc(2);
+  //cout << endl << "Arc cos (incr tita): " << kai_loc_(2);
 
   float phi = rf2o::getYaw(laser_pose_.rotation());
 
-  kai_abs(0) = kai_loc(0)*std::cos(phi) - kai_loc(1)*std::sin(phi);
-  kai_abs(1) = kai_loc(0)*std::sin(phi) + kai_loc(1)*std::cos(phi);
-	kai_abs(2) = kai_loc(2);
+  kai_abs_(0) = kai_loc_(0)*std::cos(phi) - kai_loc_(1)*std::sin(phi);
+  kai_abs_(1) = kai_loc_(0)*std::sin(phi) + kai_loc_(1)*std::cos(phi);
+  kai_abs_(2) = kai_loc_(2);
 
 
 	//						Update poses
@@ -900,7 +900,7 @@ void CLaserOdometry2D::PoseUpdate()
   mrpt::math::CMatrixDouble33 aux_acu = acu_trans;
   Pose3d pose_aux_2D = Pose3d::Identity();
 
-  pose_aux_2D = rf2o::matrixYaw(double(kai_loc(2)/fps));
+  pose_aux_2D = rf2o::matrixYaw(double(kai_loc_(2)/fps));
   pose_aux_2D.translation()(0) = acu_trans(0,2);
   pose_aux_2D.translation()(1) = acu_trans(1,2);
 
@@ -913,9 +913,9 @@ void CLaserOdometry2D::PoseUpdate()
 	//				Compute kai_loc_old
 	//-------------------------------------------------------
   phi = rf2o::getYaw(laser_pose_.rotation());
-  kai_loc_old(0) =  kai_abs(0)*std::cos(phi) + kai_abs(1)*std::sin(phi);
-  kai_loc_old(1) = -kai_abs(0)*std::sin(phi) + kai_abs(1)*std::cos(phi);
-  kai_loc_old(2) =  kai_abs(2);
+  kai_loc_old_(0) =  kai_abs_(0)*std::cos(phi) + kai_abs_(1)*std::sin(phi);
+  kai_loc_old_(1) = -kai_abs_(0)*std::sin(phi) + kai_abs_(1)*std::cos(phi);
+  kai_loc_old_(2) =  kai_abs_(2);
 
     ROS_INFO_COND(verbose, "[rf2o] LASERodom = [%f %f %f]",
                   laser_pose_.translation()(0),
