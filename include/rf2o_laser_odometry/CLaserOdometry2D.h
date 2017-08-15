@@ -16,40 +16,20 @@
 #ifndef CLaserOdometry2D_H
 #define CLaserOdometry2D_H
 
+// std header
+#include <iostream>
+#include <fstream>
+#include <numeric>
+
+// ROS headers
 #include <ros/ros.h>
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/LaserScan.h>
 
-// MRPT related headers
-#include <mrpt/version.h>
-#if MRPT_VERSION>=0x130
-#   include <mrpt/obs/CObservation2DRangeScan.h>
-#   include <mrpt/obs/CObservationOdometry.h>
-    typedef mrpt::obs::CObservation2DRangeScan CObservation2DRangeScan;
-#else
-#   include <mrpt/slam/CObservation2DRangeScan.h>
-#   include <mrpt/slam/CObservationOdometry.h>
-    typedef mrpt::poses::CObservation2DRangeScan CObservation2DRangeScan;
-
-#endif
-
-#if MRPT_VERSION<0x150
-#   include <mrpt/system/threads.h>
-#endif
-
-#include <mrpt/system/os.h>
-#include <mrpt/poses/CPose3D.h>
-#include <mrpt/utils.h>
-//#include <mrpt/opengl.h>
-#include <mrpt/math/CHistogram.h>
-
-#include <boost/bind.hpp>
+// Eigen headers
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <unsupported/Eigen/MatrixFunctions>
-#include <iostream>
-#include <fstream>
-#include <numeric>
 
 namespace rf2o {
 template <typename T>
@@ -113,7 +93,7 @@ public:
 
 protected:
 
-  bool verbose,module_initialized,first_laser_scan;
+  bool verbose, module_initialized, first_laser_scan;
 
     // Internal Data
 	std::vector<Eigen::MatrixXf> range;
@@ -144,8 +124,6 @@ protected:
   MatrixS31 Var;	//3 unknowns: vx, vy, w
   IncrementCov cov_odo;
 
-
-
     //std::string LaserVarName;				//Name of the topic containing the scan lasers \laser_scan
 	float fps;								//In Hz
 	float fovh;								//Horizontal FOV
@@ -160,7 +138,7 @@ protected:
 
   double lin_speed, ang_speed;
 
-  ros::Duration	m_runtime;
+  ros::WallDuration	m_runtime;
     ros::Time last_odom_time, current_scan_time;
 
   MatrixS31 kai_abs_;
@@ -193,7 +171,7 @@ protected:
     void solveSystemNonLinear();
 	void filterLevelSolution();
 	void PoseUpdate();
-    void Reset(const Pose3d& ini_pose, CObservation2DRangeScan scan);
+    void Reset(const Pose3d& ini_pose/*, CObservation2DRangeScan scan*/);
 };
 
-#endif
+#endif // CLaserOdometry2D_H
