@@ -160,9 +160,7 @@ protected:
 
   double lin_speed, ang_speed;
 
-    //mrpt::gui::CDisplayWindowPlots window;
-	mrpt::utils::CTicTac		m_clock;
-	float		m_runtime;
+  ros::Duration	m_runtime;
     ros::Time last_odom_time, current_scan_time;
 
   MatrixS31 kai_abs_;

@@ -175,7 +175,8 @@ bool CLaserOdometry2D::odometryCalculation(const sensor_msgs::LaserScan& scan)
     for (unsigned int i = 0; i<width; i++)
         range_wf(i) = scan.ranges[i];
 
-    m_clock.Tic();
+    ros::Time start = ros::Time::now();
+
     createImagePyramid();
 
     //Coarse-to-fine scheme
@@ -225,9 +226,9 @@ bool CLaserOdometry2D::odometryCalculation(const sensor_msgs::LaserScan& scan)
         filterLevelSolution();
     }
 
-    m_runtime = 1000*m_clock.Tac();
+    m_runtime = ros::Time::now() - start;
 
-    ROS_INFO_COND(verbose, "[rf2o] execution time (ms): %f", m_runtime);
+    ROS_INFO_COND(verbose, "[rf2o] execution time (ms): %f", (1000*m_runtime.toNSec()));
 
     //Update poses
     PoseUpdate();
