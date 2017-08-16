@@ -34,6 +34,7 @@
 #include <unsupported/Eigen/MatrixFunctions>
 
 namespace rf2o {
+
 template <typename T>
 inline int sign(T x) { return x<0 ? -1:1; }
 
@@ -61,7 +62,6 @@ inline Eigen::Matrix<T, 3, 3> matrixYaw(const T yaw)
 {
   return matrixRollPitchYaw<T>(0, 0, yaw);
 }
-} // namespace rf2o
 
 class CLaserOdometry2D
 {
@@ -174,5 +174,7 @@ protected:
   void PoseUpdate();
   void Reset(const Pose3d& ini_pose/*, CObservation2DRangeScan scan*/);
 };
+
+} /* namespace rf2o */
 
 #endif // CLaserOdometry2D_H

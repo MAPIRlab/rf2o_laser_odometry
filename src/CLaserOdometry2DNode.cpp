@@ -20,6 +20,8 @@
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
 
+namespace rf2o {
+
 class CLaserOdometry2DNode : CLaserOdometry2D
 {
 public:
@@ -249,6 +251,8 @@ void CLaserOdometry2DNode::publish()
   odom_pub.publish(odom);
 }
 
+} /* namespace rf2o */
+
 //-----------------------------------------------------------------------------------
 //                                   MAIN
 //-----------------------------------------------------------------------------------
@@ -256,7 +260,7 @@ int main(int argc, char** argv)
 {
   ros::init(argc, argv, "RF2O_LaserOdom");
 
-  CLaserOdometry2DNode myLaserOdomNode;
+  rf2o::CLaserOdometry2DNode myLaserOdomNode;
 
   ros::TimerOptions timer_opt;
   timer_opt.oneshot   = false;
@@ -264,7 +268,7 @@ int main(int argc, char** argv)
   timer_opt.callback_queue = ros::getGlobalCallbackQueue();
   timer_opt.tracked_object = ros::VoidConstPtr();
 
-  timer_opt.callback = boost::bind(&CLaserOdometry2DNode::process, &myLaserOdomNode, _1);
+  timer_opt.callback = boost::bind(&rf2o::CLaserOdometry2DNode::process, &myLaserOdomNode, _1);
   timer_opt.period   = ros::Rate(myLaserOdomNode.freq).expectedCycleTime();
 
   ros::Timer rf2o_timer = ros::NodeHandle("~").createTimer(timer_opt);

@@ -17,6 +17,8 @@
 
 #include "rf2o_laser_odometry/CLaserOdometry2D.h"
 
+namespace rf2o {
+
 // --------------------------------------------
 // CLaserOdometry2D
 //---------------------------------------------
@@ -951,3 +953,5 @@ void CLaserOdometry2D::PoseUpdate()
     ang_speed = sum2 / last_m_ang_speeds.size();
     */
 }
+
+} /* namespace rf2o */
