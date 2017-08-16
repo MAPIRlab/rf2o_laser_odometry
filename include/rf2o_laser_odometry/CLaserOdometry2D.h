@@ -11,6 +11,8 @@
 *
 * Maintainer: Javier G. Monroy
 * MAPIR group: http://mapir.isa.uma.es/
+*
+* Modifications: Jeremie Deray
 ******************************************************************************************** */
 
 #ifndef CLaserOdometry2D_H
@@ -72,74 +74,74 @@ public:
   using MatrixS31 = Eigen::Matrix<Scalar, 3, 1>;
   using IncrementCov = Eigen::Matrix<Scalar, 3, 3>;
 
-	CLaserOdometry2D();
-    virtual ~CLaserOdometry2D() = default;
+  CLaserOdometry2D();
+  virtual ~CLaserOdometry2D() = default;
 
-    void init(const sensor_msgs::LaserScan& scan,
-              const geometry_msgs::Pose& initial_robot_pose);
+  void init(const sensor_msgs::LaserScan& scan,
+            const geometry_msgs::Pose& initial_robot_pose);
 
-    bool is_initialized();
+  bool is_initialized();
 
-    bool odometryCalculation(const sensor_msgs::LaserScan& scan);
+  bool odometryCalculation(const sensor_msgs::LaserScan& scan);
 
-    void setLaserPose(const Pose3d& laser_pose);
+  void setLaserPose(const Pose3d& laser_pose);
 
-    const Pose3d& getIncrement() const;
+  const Pose3d& getIncrement() const;
 
-    const IncrementCov& getIncrementCovariance() const;
+  const IncrementCov& getIncrementCovariance() const;
 
-    Pose3d& getPose();
-    const Pose3d& getPose() const;
+  Pose3d& getPose();
+  const Pose3d& getPose() const;
 
 protected:
 
   bool verbose, module_initialized, first_laser_scan;
 
-    // Internal Data
-	std::vector<Eigen::MatrixXf> range;
-	std::vector<Eigen::MatrixXf> range_old;
-	std::vector<Eigen::MatrixXf> range_inter;
-	std::vector<Eigen::MatrixXf> range_warped;
-	std::vector<Eigen::MatrixXf> xx;
-	std::vector<Eigen::MatrixXf> xx_inter;
-	std::vector<Eigen::MatrixXf> xx_old;
-	std::vector<Eigen::MatrixXf> xx_warped;
-	std::vector<Eigen::MatrixXf> yy;
-	std::vector<Eigen::MatrixXf> yy_inter;
-	std::vector<Eigen::MatrixXf> yy_old;
-	std::vector<Eigen::MatrixXf> yy_warped;
-	std::vector<Eigen::MatrixXf> transformations;
+  // Internal Data
+  std::vector<Eigen::MatrixXf> range;
+  std::vector<Eigen::MatrixXf> range_old;
+  std::vector<Eigen::MatrixXf> range_inter;
+  std::vector<Eigen::MatrixXf> range_warped;
+  std::vector<Eigen::MatrixXf> xx;
+  std::vector<Eigen::MatrixXf> xx_inter;
+  std::vector<Eigen::MatrixXf> xx_old;
+  std::vector<Eigen::MatrixXf> xx_warped;
+  std::vector<Eigen::MatrixXf> yy;
+  std::vector<Eigen::MatrixXf> yy_inter;
+  std::vector<Eigen::MatrixXf> yy_old;
+  std::vector<Eigen::MatrixXf> yy_warped;
+  std::vector<Eigen::MatrixXf> transformations;
 
-	Eigen::MatrixXf range_wf;
-	Eigen::MatrixXf dtita;
-	Eigen::MatrixXf dt;
-	Eigen::MatrixXf rtita;
-	Eigen::MatrixXf normx, normy, norm_ang;
-	Eigen::MatrixXf weights;
-	Eigen::MatrixXi null;
+  Eigen::MatrixXf range_wf;
+  Eigen::MatrixXf dtita;
+  Eigen::MatrixXf dt;
+  Eigen::MatrixXf rtita;
+  Eigen::MatrixXf normx, normy, norm_ang;
+  Eigen::MatrixXf weights;
+  Eigen::MatrixXi null;
 
-    Eigen::MatrixXf A,Aw;
-    Eigen::MatrixXf B,Bw;
+  Eigen::MatrixXf A,Aw;
+  Eigen::MatrixXf B,Bw;
 
   MatrixS31 Var;	//3 unknowns: vx, vy, w
   IncrementCov cov_odo;
 
-    //std::string LaserVarName;				//Name of the topic containing the scan lasers \laser_scan
-	float fps;								//In Hz
-	float fovh;								//Horizontal FOV
-	unsigned int cols;
-	unsigned int cols_i;
-	unsigned int width;
-	unsigned int ctf_levels;
-	unsigned int image_level, level;
-	unsigned int num_valid_range;
-    unsigned int iter_irls;
-	float g_mask[5];
+  //std::string LaserVarName;				//Name of the topic containing the scan lasers \laser_scan
+  float fps;								//In Hz
+  float fovh;								//Horizontal FOV
+  unsigned int cols;
+  unsigned int cols_i;
+  unsigned int width;
+  unsigned int ctf_levels;
+  unsigned int image_level, level;
+  unsigned int num_valid_range;
+  unsigned int iter_irls;
+  float g_mask[5];
 
   double lin_speed, ang_speed;
 
   ros::WallDuration	m_runtime;
-    ros::Time last_odom_time, current_scan_time;
+  ros::Time last_odom_time, current_scan_time;
 
   MatrixS31 kai_abs_;
   MatrixS31 kai_loc_;
@@ -154,24 +156,23 @@ protected:
   Pose3d robot_pose_;
   Pose3d robot_oldpose_;
 
-	bool test;
-    std::vector<double> last_m_lin_speeds;
-    std::vector<double> last_m_ang_speeds;
+  bool test;
+  std::vector<double> last_m_lin_speeds;
+  std::vector<double> last_m_ang_speeds;
 
-
-	// Methods
-	void createImagePyramid();
-	void calculateCoord();
-	void performWarping();
-	void calculaterangeDerivativesSurface();
-	void computeNormals();
-	void computeWeights();
-	void findNullPoints();
-	void solveSystemOneLevel();
-    void solveSystemNonLinear();
-	void filterLevelSolution();
-	void PoseUpdate();
-    void Reset(const Pose3d& ini_pose/*, CObservation2DRangeScan scan*/);
+  // Methods
+  void createImagePyramid();
+  void calculateCoord();
+  void performWarping();
+  void calculaterangeDerivativesSurface();
+  void computeNormals();
+  void computeWeights();
+  void findNullPoints();
+  void solveSystemOneLevel();
+  void solveSystemNonLinear();
+  void filterLevelSolution();
+  void PoseUpdate();
+  void Reset(const Pose3d& ini_pose/*, CObservation2DRangeScan scan*/);
 };
 
 #endif // CLaserOdometry2D_H
