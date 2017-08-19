@@ -36,7 +36,7 @@
 namespace rf2o {
 
 template <typename T>
-inline int sign(T x) { return x<0 ? -1:1; }
+inline T sign(const T x) { return x<T(0) ? -1:1; }
 
 template <typename Derived>
 inline typename Eigen::MatrixBase<Derived>::Scalar
@@ -170,7 +170,7 @@ protected:
   void findNullPoints();
   void solveSystemOneLevel();
   void solveSystemNonLinear();
-  void filterLevelSolution();
+  bool filterLevelSolution();
   void PoseUpdate();
   void Reset(const Pose3d& ini_pose/*, CObservation2DRangeScan scan*/);
 };

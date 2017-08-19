@@ -24,8 +24,16 @@ namespace rf2o {
 //---------------------------------------------
 
 CLaserOdometry2D::CLaserOdometry2D() :
+  verbose(false),
   module_initialized(false),
-  first_laser_scan(true)
+  first_laser_scan(true),
+  last_increment_(Pose3d::Identity()),
+  laser_pose_on_robot_(Pose3d::Identity()),
+  laser_pose_on_robot_inv_(Pose3d::Identity()),
+  laser_pose_(Pose3d::Identity()),
+  laser_oldpose_(Pose3d::Identity()),
+  robot_pose_(Pose3d::Identity()),
+  robot_oldpose_(Pose3d::Identity())
 {
   //
 }
@@ -34,7 +42,7 @@ void CLaserOdometry2D::setLaserPose(const Pose3d& laser_pose)
 {
   //Set laser pose on the robot
 
-  laser_pose_on_robot_ = laser_pose;
+  laser_pose_on_robot_     = laser_pose;
   laser_pose_on_robot_inv_ = laser_pose_on_robot_.inverse();
 }
 
@@ -51,24 +59,26 @@ void CLaserOdometry2D::init(const sensor_msgs::LaserScan& scan,
 
   width = scan.ranges.size();    // Num of samples (size) of the scan laser
 
-  cols = width;						// Max reolution. Should be similar to the width parameter
-  fovh = fabs(scan.angle_max - scan.angle_min); // Horizontal Laser's FOV
+  cols = width;						// Max resolution. Should be similar to the width parameter
+  fovh = std::abs(scan.angle_max - scan.angle_min); // Horizontal Laser's FOV
   ctf_levels = 5;                     // Coarse-to-Fine levels
-  iter_irls = 5;                      //Num iterations to solve iterative reweighted least squares
+  iter_irls  = 5;                      //Num iterations to solve iterative reweighted least squares
 
-  Pose3d robotInitialPose = Pose3d::Identity();
-  const geometry_msgs::Pose _src = initial_robot_pose;
+  Pose3d robot_initial_pose = Pose3d::Identity();
 
-  robotInitialPose = Eigen::Quaterniond(_src.orientation.w,
-                                        _src.orientation.x,
-                                        _src.orientation.y,
-                                        _src.orientation.z);
+  robot_initial_pose = Eigen::Quaterniond(initial_robot_pose.orientation.w,
+                                          initial_robot_pose.orientation.x,
+                                          initial_robot_pose.orientation.y,
+                                          initial_robot_pose.orientation.z);
 
-  robotInitialPose.translation()(0) = _src.position.x;
-  robotInitialPose.translation()(1) = _src.position.y;
+  robot_initial_pose.translation()(0) = initial_robot_pose.position.x;
+  robot_initial_pose.translation()(1) = initial_robot_pose.position.y;
+
+  ROS_INFO_STREAM_COND(verbose, "[rf2o] Setting origin at:\n"
+                       << robot_initial_pose.matrix());
 
   //Set the initial pose
-  laser_pose_    = robotInitialPose * laser_pose_on_robot_;
+  laser_pose_    = robot_initial_pose * laser_pose_on_robot_;
   laser_oldpose_ = laser_oldpose_;
 
   // Init module (internal)
@@ -129,16 +139,20 @@ void CLaserOdometry2D::init(const sensor_msgs::LaserScan& scan,
   norm_ang.resize(1, cols);
   weights.resize(1, cols);
 
-  null = Eigen::MatrixXi::Constant(1, cols, 0);
+  null    = Eigen::MatrixXi::Constant(1, cols, 0);
   cov_odo = IncrementCov::Zero();
 
   fps = 1.f;		//In Hz
   num_valid_range = 0;
 
   //Compute gaussian mask
-  g_mask[0] = 1.f / 16.f; g_mask[1] = 0.25f; g_mask[2] = 6.f / 16.f; g_mask[3] = g_mask[1]; g_mask[4] = g_mask[0];
+  g_mask[0] = 1.f / 16.f;
+  g_mask[1] = 0.25f;
+  g_mask[2] = 6.f / 16.f;
+  g_mask[3] = g_mask[1];
+  g_mask[4] = g_mask[0];
 
-  kai_abs_ = MatrixS31::Zero();
+  kai_abs_     = MatrixS31::Zero();
   kai_loc_old_ = MatrixS31::Zero();
 
   module_initialized = true;
@@ -172,8 +186,7 @@ bool CLaserOdometry2D::odometryCalculation(const sensor_msgs::LaserScan& scan)
   //==================================================================================
 
   //copy laser scan to internal variable
-  for (unsigned int i = 0; i<width; i++)
-    range_wf(i) = scan.ranges[i];
+  range_wf = Eigen::Map<const Eigen::MatrixXf>(scan.ranges.data(), width, 1);
 
   ros::WallTime start = ros::WallTime::now();
 
@@ -194,8 +207,8 @@ bool CLaserOdometry2D::odometryCalculation(const sensor_msgs::LaserScan& scan)
     if (i == 0)
     {
       range_warped[image_level] = range[image_level];
-      xx_warped[image_level] = xx[image_level];
-      yy_warped[image_level] = yy[image_level];
+      xx_warped[image_level]    = xx[image_level];
+      yy_warped[image_level]    = yy[image_level];
     }
     else
       performWarping();
@@ -221,10 +234,19 @@ bool CLaserOdometry2D::odometryCalculation(const sensor_msgs::LaserScan& scan)
       solveSystemNonLinear();
       //solveSystemOneLevel();    //without robust-function
     }
+    else
+    {
+      /// @todo At initialization something
+      /// isn't properly initialized so that
+      /// uninitialized values get propagated
+      /// from 'filterLevelSolution' first call
+      /// Throughout the whole execution. Thus
+      /// this 'continue' that surprisingly works.
+      continue;
+    }
 
     //8. Filter solution
-    filterLevelSolution();
-
+    if (!filterLevelSolution()) return false;
   }
 
   m_runtime = ros::WallTime::now() - start;
@@ -289,7 +311,6 @@ void CLaserOdometry2D::createImagePyramid()
           }
           else
             range[i](u) = 0.f;
-
         }
 
         //Boundary
@@ -318,7 +339,6 @@ void CLaserOdometry2D::createImagePyramid()
           }
           else
             range[i](u) = 0.f;
-
         }
       }
     }
@@ -415,14 +435,14 @@ void CLaserOdometry2D::calculateCoord()
     if ((range_old[image_level](u) == 0.f) || (range_warped[image_level](u) == 0.f))
     {
       range_inter[image_level](u) = 0.f;
-      xx_inter[image_level](u) = 0.f;
-      yy_inter[image_level](u) = 0.f;
+      xx_inter[image_level](u)    = 0.f;
+      yy_inter[image_level](u)    = 0.f;
     }
     else
     {
       range_inter[image_level](u) = 0.5f*(range_old[image_level](u) + range_warped[image_level](u));
-      xx_inter[image_level](u) = 0.5f*(xx_old[image_level](u) + xx_warped[image_level](u));
-      yy_inter[image_level](u) = 0.5f*(yy_old[image_level](u) + yy_warped[image_level](u));
+      xx_inter[image_level](u)    = 0.5f*(xx_old[image_level](u)    + xx_warped[image_level](u));
+      yy_inter[image_level](u)    = 0.5f*(yy_old[image_level](u)    + yy_warped[image_level](u));
     }
   }
 }
@@ -696,17 +716,15 @@ void CLaserOdometry2D::solveSystemNonLinear()
   cov_odo = (1.f/float(num_valid_range-3))*AtA.inverse()*res.squaredNorm();
   kai_loc_level_ = Var;
 
-  ROS_INFO_STREAM_COND(verbose, "[rf2o] COV_ODO:\n" << cov_odo);
+  ROS_INFO_STREAM_COND(verbose && false, "[rf2o] COV_ODO:\n" << cov_odo);
 }
 
 void CLaserOdometry2D::Reset(const Pose3d& ini_pose/*, CObservation2DRangeScan scan*/)
 {
   //Set the initial pose
-  laser_pose_ = ini_pose;
+  laser_pose_    = ini_pose;
   laser_oldpose_ = ini_pose;
 
-  //readLaser(scan);
-  createImagePyramid();
   //readLaser(scan);
   createImagePyramid();
 }
@@ -786,15 +804,15 @@ void CLaserOdometry2D::performWarping()
   }
 }
 
-void CLaserOdometry2D::filterLevelSolution()
+bool CLaserOdometry2D::filterLevelSolution()
 {
   //		Calculate Eigenvalues and Eigenvectors
   //----------------------------------------------------------
   Eigen::SelfAdjointEigenSolver<Eigen::MatrixXf> eigensolver(cov_odo);
   if (eigensolver.info() != Eigen::Success)
   {
-    ROS_INFO_COND(verbose, "[rf2o] ERROR: Eigensolver couldn't find a solution. Pose is not updated");
-    return;
+    ROS_WARN_COND(verbose, "[rf2o] ERROR: Eigensolver couldn't find a solution. Pose is not updated");
+    return false;
   }
 
   //First, we have to describe both the new linear and angular speeds in the "eigenvector" basis
@@ -804,6 +822,8 @@ void CLaserOdometry2D::filterLevelSolution()
   Bii = eigensolver.eigenvectors();
 
   kai_b = Bii.colPivHouseholderQr().solve(kai_loc_level_);
+
+  assert((kai_loc_level_).isApprox(Bii*kai_b, 1e-5) && "Ax=b has no solution." && __LINE__);
 
   //Second, we have to describe both the old linear and angular speeds in the "eigenvector" basis too
   //-------------------------------------------------------------------------------------------------
@@ -828,52 +848,61 @@ void CLaserOdometry2D::filterLevelSolution()
   Eigen::Matrix<float,3,1> kai_b_old;
   kai_b_old = Bii.colPivHouseholderQr().solve(kai_loc_sub);
 
+  assert((kai_loc_sub).isApprox(Bii*kai_b_old, 1e-5) && "Ax=b has no solution." && __LINE__);
+
   //Filter speed
   const float cf = 15e3f*std::exp(-float(int(level))),
-      df = 0.05f*std::exp(-float(int(level)));
+              df = 0.05f*std::exp(-float(int(level)));
 
   Eigen::Matrix<float,3,1> kai_b_fil;
   for (unsigned int i=0; i<3; i++)
   {
-    kai_b_fil(i,0) = (kai_b(i,0) + (cf*eigensolver.eigenvalues()(i,0) + df)*kai_b_old(i,0))/(1.f + cf*eigensolver.eigenvalues()(i,0) + df);
+    kai_b_fil(i) = (kai_b(i) + (cf*eigensolver.eigenvalues()(i,0) + df)*kai_b_old(i))/(1.f + cf*eigensolver.eigenvalues()(i,0) + df);
     //kai_b_fil_f(i,0) = (1.f*kai_b(i,0) + 0.f*kai_b_old_f(i,0))/(1.0f + 0.f);
   }
 
   //Transform filtered speed to local reference frame and compute transformation
-  Eigen::Matrix<float,3,1> kai_loc_fil = Bii.inverse().colPivHouseholderQr().solve(kai_b_fil);
+  Eigen::Matrix<float, 3, 1> kai_loc_fil = Bii.inverse().colPivHouseholderQr().solve(kai_b_fil);
+
+  assert((kai_b_fil).isApprox(Bii.inverse()*kai_loc_fil, 1e-5) && "Ax=b has no solution." && __LINE__);
 
   //transformation
   const float incrx = kai_loc_fil(0)/fps;
   const float incry = kai_loc_fil(1)/fps;
-  const float rot = kai_loc_fil(2)/fps;
+  const float rot   = kai_loc_fil(2)/fps;
+
   transformations[level](0,0) = std::cos(rot);
   transformations[level](0,1) = -std::sin(rot);
   transformations[level](1,0) = std::sin(rot);
   transformations[level](1,1) = std::cos(rot);
   transformations[level](0,2) = incrx;
   transformations[level](1,2) = incry;
+
+  return true;
 }
 
 void CLaserOdometry2D::PoseUpdate()
 {
-  //First, compute the overall transformation
+  //  First, compute the overall transformation
   //---------------------------------------------------
   Eigen::Matrix3f acu_trans;
   acu_trans.setIdentity();
+
   for (unsigned int i=1; i<=ctf_levels; i++)
     acu_trans = transformations[i-1]*acu_trans;
-
 
   //				Compute kai_loc and kai_abs
   //--------------------------------------------------------
   kai_loc_(0) = fps*acu_trans(0,2);
   kai_loc_(1) = fps*acu_trans(1,2);
+
   if (acu_trans(0,0) > 1.f)
     kai_loc_(2) = 0.f;
   else
   {
     kai_loc_(2) = fps*std::acos(acu_trans(0,0))*rf2o::sign(acu_trans(1,0));
   }
+
   //cout << endl << "Arc cos (incr tita): " << kai_loc_(2);
 
   float phi = rf2o::getYaw(laser_pose_.rotation());
