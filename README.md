@@ -6,8 +6,3 @@ RF2O is a fast and precise method to estimate the planar motion of a lidar from 
 Its very low computational cost (0.9 milliseconds on a single CPU core) together whit its high precission, makes RF2O a suitable method for those robotic applications that require planar odometry.
 
 For full description of the algorithm, please refer to: **Planar Odometry from a Radial Laser Scanner. A Range Flow-based Approach. ICRA 2016** Available at: http://mapir.isa.uma.es/work/rf2o
-
-
-# Requirements
-RF2O core is implemented within the **Mobile Robot Programming Toolkit** [MRPT](http://www.mrpt.org/), so it is necessary to install this powerful library (see instructions [here](http://www.mrpt.org/download-mrpt/))
-So far RF2O has been tested with the Ubuntu official repository version (MRPT v1.3), and we are working to update it to MRPT v.1.9
