@@ -1050,11 +1050,23 @@ void CLaserOdometry2D::PoseUpdate()
     odom.pose.pose.position.y = robot_pose.y();
     odom.pose.pose.position.z = 0.0;
     odom.pose.pose.orientation = tf::createQuaternionMsgFromYaw(robot_pose.yaw());
+    odom.pose.covariance[0] = 1e-6;
+    odom.pose.covariance[7] = 1e-6;
+    odom.pose.covariance[14] = 1e-6;
+    odom.pose.covariance[21] = 1e-6;
+    odom.pose.covariance[28] = 1e-6;
+    odom.pose.covariance[35] = 1e-6;
     //set the velocity
     odom.child_frame_id = base_frame_id;
     odom.twist.twist.linear.x = lin_speed;    //linear speed
     odom.twist.twist.linear.y = 0.0;
     odom.twist.twist.angular.z = ang_speed;   //angular speed
+    odom.pose.covariance[0] = 1e-6;
+    odom.pose.covariance[7] = 1e-6;
+    odom.pose.covariance[14] = 1e-6;
+    odom.pose.covariance[21] = 1e-6;
+    odom.pose.covariance[28] = 1e-6;
+    odom.pose.covariance[35] = 1e-6;    //publish the message
     //publish the message
     odom_pub.publish(odom);
 }
