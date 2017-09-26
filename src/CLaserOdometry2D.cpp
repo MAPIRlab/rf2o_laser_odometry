@@ -35,8 +35,8 @@ CLaserOdometry2D::CLaserOdometry2D()
     ros::NodeHandle pn("~");
     pn.param<std::string>("laser_scan_topic",laser_scan_topic,"/laser_scan");
     pn.param<std::string>("odom_topic", odom_topic, "/odom_rf2o");
-    pn.param<std::string>("base_frame_id", base_frame_id, "/base_link");
-    pn.param<std::string>("odom_frame_id", odom_frame_id, "/odom");
+    pn.param<std::string>("base_frame_id", base_frame_id, "base_link");
+    pn.param<std::string>("odom_frame_id", odom_frame_id, "odom");
     pn.param<bool>("publish_tf", publish_tf, true);
     pn.param<std::string>("init_pose_from_topic", init_pose_from_topic, "/base_pose_ground_truth");
     pn.param<double>("freq",freq,10.0);
@@ -1029,7 +1029,7 @@ void CLaserOdometry2D::PoseUpdate()
         //ROS_INFO("[rf2o] Publishing TF: [base_link] to [odom]");
         geometry_msgs::TransformStamped odom_trans;
         odom_trans.header.stamp = ros::Time::now();
-        odom_trans.header.frame_id = odom_frame_id;
+        odom_trans.header.frame_id = base_frame_id;
         odom_trans.child_frame_id = base_frame_id;
         odom_trans.transform.translation.x = robot_pose.x();
         odom_trans.transform.translation.y = robot_pose.y();
@@ -1044,7 +1044,7 @@ void CLaserOdometry2D::PoseUpdate()
     //ROS_INFO("[rf2o] Publishing Odom Topic");
     nav_msgs::Odometry odom;
     odom.header.stamp = ros::Time::now();
-    odom.header.frame_id = odom_frame_id;
+    odom.header.frame_id = base_frame_id;
     //set the position
     odom.pose.pose.position.x = robot_pose.x();
     odom.pose.pose.position.y = robot_pose.y();
@@ -1061,12 +1061,12 @@ void CLaserOdometry2D::PoseUpdate()
     odom.twist.twist.linear.x = lin_speed;    //linear speed
     odom.twist.twist.linear.y = 0.0;
     odom.twist.twist.angular.z = ang_speed;   //angular speed
-    odom.pose.covariance[0] = 1e-6;
-    odom.pose.covariance[7] = 1e-6;
-    odom.pose.covariance[14] = 1e-6;
-    odom.pose.covariance[21] = 1e-6;
-    odom.pose.covariance[28] = 1e-6;
-    odom.pose.covariance[35] = 1e-6;    //publish the message
+    odom.twist.covariance[0] = 1e-6;
+    odom.twist.covariance[7] = 1e-6;
+    odom.twist.covariance[14] = 1e-6;
+    odom.twist.covariance[21] = 1e-6;
+    odom.twist.covariance[28] = 1e-6;
+    odom.twist.covariance[35] = 1e-6;    //publish the message
     //publish the message
     odom_pub.publish(odom);
 }
