@@ -62,3 +62,10 @@ target_link_libraries(rf2o_laser_odometry_node
    ${EIGEN_LIBRARIES}
    ${MRPT_LIBS}
 )
+
+# Mark executables and/or libraries for installation
+install(TARGETS rf2o_laser_odometry_node
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+)
