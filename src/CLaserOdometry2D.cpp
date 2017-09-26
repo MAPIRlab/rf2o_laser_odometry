@@ -41,6 +41,7 @@ CLaserOdometry2D::CLaserOdometry2D()
     pn.param<std::string>("init_pose_from_topic", init_pose_from_topic, "/base_pose_ground_truth");
     pn.param<double>("freq",freq,10.0);
     pn.param<bool>("verbose", verbose, true);
+    pn.param<int>("max_attempts_to_get_init_pose", max_attempts_to_get_init_pose, 30);
 
     //Publishers and Subscribers
     //--------------------------    
@@ -1111,6 +1112,8 @@ int main(int argc, char** argv)
     //----------
     ROS_INFO("[rf2o] initialization complete...Looping");
     ros::Rate loop_rate(myLaserOdom.freq);
+    int num_attempts_to_init_pose = 0;
+
     while (ros::ok())
     {
         ros::spinOnce();        //Check for new laser scans
@@ -1123,6 +1126,18 @@ int main(int argc, char** argv)
         else
         {
             ROS_WARN("[rf2o] Waiting for laser_scans....") ;
+            num_attempts_to_init_pose += 1;
+            if (num_attempts_to_init_pose > myLaserOdom.max_attempts_to_get_init_pose && !myLaserOdom.is_initialized())
+            {
+                myLaserOdom.GT_pose_initialized = true;
+                myLaserOdom.initial_robot_pose.pose.pose.position.x = 0;
+                myLaserOdom.initial_robot_pose.pose.pose.position.y = 0;
+                myLaserOdom.initial_robot_pose.pose.pose.position.z = 0;
+                myLaserOdom.initial_robot_pose.pose.pose.orientation.w = 0;
+                myLaserOdom.initial_robot_pose.pose.pose.orientation.x = 0;
+                myLaserOdom.initial_robot_pose.pose.pose.orientation.y = 0;
+                myLaserOdom.initial_robot_pose.pose.pose.orientation.z = 0;
+            }
         }
 
         loop_rate.sleep();

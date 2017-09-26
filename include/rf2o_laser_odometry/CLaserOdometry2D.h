@@ -71,14 +71,16 @@ public:
     std::string         odom_frame_id;
     std::string         init_pose_from_topic;
     double              freq;
+    int 				max_attempts_to_get_init_pose;
+    bool				GT_pose_initialized;
+    nav_msgs::Odometry  initial_robot_pose;
 
 protected:
     ros::NodeHandle             n;
     sensor_msgs::LaserScan      last_scan;
-    bool                        module_initialized,first_laser_scan,new_scan_available, GT_pose_initialized, verbose;
+    bool                        module_initialized,first_laser_scan,new_scan_available, verbose;
     tf::TransformListener       tf_listener;          //Do not put inside the callback
     tf::TransformBroadcaster    odom_broadcaster;
-    nav_msgs::Odometry          initial_robot_pose;
 
     //Subscriptions & Publishers
     ros::Subscriber laser_sub, initPose_sub;
