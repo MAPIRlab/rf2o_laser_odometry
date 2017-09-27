@@ -42,6 +42,9 @@ CLaserOdometry2D::CLaserOdometry2D()
     pn.param<double>("freq",freq,10.0);
     pn.param<bool>("verbose", verbose, true);
     pn.param<int>("max_attempts_to_get_init_pose", max_attempts_to_get_init_pose, 30);
+    pn.param<double>("X_Covariance", XCovar, 1e-6);
+    pn.param<double>("Y_Covariance", YCovar, 1e-6);
+    pn.param<double>("Y_Covariance", ZCovar, 1e-6);
 
     //Publishers and Subscribers
     //--------------------------    
@@ -1029,7 +1032,7 @@ void CLaserOdometry2D::PoseUpdate()
         //ROS_INFO("[rf2o] Publishing TF: [base_link] to [odom]");
         geometry_msgs::TransformStamped odom_trans;
         odom_trans.header.stamp = ros::Time::now();
-        odom_trans.header.frame_id = base_frame_id;
+        odom_trans.header.frame_id = odom_frame_id;
         odom_trans.child_frame_id = base_frame_id;
         odom_trans.transform.translation.x = robot_pose.x();
         odom_trans.transform.translation.y = robot_pose.y();
@@ -1044,28 +1047,28 @@ void CLaserOdometry2D::PoseUpdate()
     //ROS_INFO("[rf2o] Publishing Odom Topic");
     nav_msgs::Odometry odom;
     odom.header.stamp = ros::Time::now();
-    odom.header.frame_id = base_frame_id;
+    odom.header.frame_id = odom_frame_id;
     //set the position
     odom.pose.pose.position.x = robot_pose.x();
     odom.pose.pose.position.y = robot_pose.y();
     odom.pose.pose.position.z = 0.0;
     odom.pose.pose.orientation = tf::createQuaternionMsgFromYaw(robot_pose.yaw());
-    odom.pose.covariance[0] = 1e-6;
-    odom.pose.covariance[7] = 1e-6;
-    odom.pose.covariance[14] = 1e-6;
-    odom.pose.covariance[21] = 1e-6;
-    odom.pose.covariance[28] = 1e-6;
-    odom.pose.covariance[35] = 1e-6;
+    odom.pose.covariance[0] = XCovar;
+    odom.pose.covariance[7] = YCovar;
+    odom.pose.covariance[14] = ZCovar;
+    odom.pose.covariance[21] = 1e6;
+    odom.pose.covariance[28] = 1e6;
+    odom.pose.covariance[35] = 1e-2;
     //set the velocity
     odom.child_frame_id = base_frame_id;
     odom.twist.twist.linear.x = lin_speed;    //linear speed
     odom.twist.twist.linear.y = 0.0;
     odom.twist.twist.angular.z = ang_speed;   //angular speed
-    odom.twist.covariance[0] = 1e-6;
-    odom.twist.covariance[7] = 1e-6;
-    odom.twist.covariance[14] = 1e-6;
-    odom.twist.covariance[21] = 1e-6;
-    odom.twist.covariance[28] = 1e-6;
+    odom.twist.covariance[0] = XCovar;
+    odom.twist.covariance[7] = YCovar;
+    odom.twist.covariance[14] = ZCovar;
+    odom.twist.covariance[21] = 1e6;
+    odom.twist.covariance[28] = 1e6;
     odom.twist.covariance[35] = 1e-6;    //publish the message
     //publish the message
     odom_pub.publish(odom);

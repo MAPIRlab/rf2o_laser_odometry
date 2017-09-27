@@ -74,6 +74,7 @@ public:
     int 				max_attempts_to_get_init_pose;
     bool				GT_pose_initialized;
     nav_msgs::Odometry  initial_robot_pose;
+    double 				XCovar, YCovar, ZCovar;
 
 protected:
     ros::NodeHandle             n;
