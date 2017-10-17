@@ -42,9 +42,9 @@ CLaserOdometry2D::CLaserOdometry2D()
     pn.param<double>("freq",freq,10.0);
     pn.param<bool>("verbose", verbose, true);
     pn.param<int>("max_attempts_to_get_init_pose", max_attempts_to_get_init_pose, 30);
-    pn.param<double>("X_Covariance", XCovar, 1e-6);
-    pn.param<double>("Y_Covariance", YCovar, 1e-6);
-    pn.param<double>("Z_Covariance", ZCovar, 1e-6);
+    pn.param<double>("X_Covariance", XCovar, 1e-2);
+    pn.param<double>("Y_Covariance", YCovar, 1e-1);
+    pn.param<double>("Z_Covariance", ZCovar, 1e-2);
 
     //Publishers and Subscribers
     //--------------------------    
