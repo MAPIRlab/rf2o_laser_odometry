@@ -10,4 +10,4 @@ For full description of the algorithm, please refer to: **Planar Odometry from a
 
 # Requirements
 RF2O core is implemented within the **Mobile Robot Programming Toolkit** [MRPT](http://www.mrpt.org/), so it is necessary to install this powerful library (see instructions [here](http://www.mrpt.org/download-mrpt/))
-So far RF2O has been tested with the Ubuntu official repository version (MRPT v1.3), and we are working to update it to MRPT v.1.9.
+So far RF2O has been tested with the Ubuntu official repository version (MRPT v1.3), and we are working to update it to MRPT v.1.9
