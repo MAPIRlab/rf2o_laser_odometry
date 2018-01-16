@@ -18,7 +18,18 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(cmake_modules REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(MRPT REQUIRED base obs maps slam)
+
+find_package(MRPT REQUIRED)
+MESSAGE(STATUS "Found MRPT: " ${MRPT_VERSION})
+IF(MRPT_VERSION VERSION_LESS 1.9.9)
+        # MRPT<2.0
+        find_package(MRPT REQUIRED base obs maps slam)
+ELSE()
+        # MRPT>=2.0
+        find_package(MRPT REQUIRED obs maps slam poses core)
+ENDIF()
+
+
 #include_directories(${MRPT_INCLUDE_DIRS})
 #MESSAGE( STATUS "MRPT_INCLUDE_DIRS: " ${MRPT_INCLUDE_DIRS})
 #link_directories(${MRPT_LIBRARY_DIRS})
@@ -50,6 +61,7 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
   ${EIGEN_INCLUDE_DIRS}
+  ${MRPT_INCLUDE_DIRS}
 )
 
 ## Declare a cpp executable

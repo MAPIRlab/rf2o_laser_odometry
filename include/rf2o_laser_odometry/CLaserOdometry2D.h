@@ -26,13 +26,15 @@
 // MRPT related headers
 #include <mrpt/version.h>
 #if MRPT_VERSION>=0x130
-#   include <mrpt/obs/CObservation2DRangeScan.h>
-#   include <mrpt/obs/CObservationOdometry.h>
+    #include <mrpt/obs/CObservation2DRangeScan.h>
+    #include <mrpt/obs/CObservationOdometry.h>
+    #include <mrpt/utils/CTicTac.h>
     using namespace mrpt::obs;
 #else
 #   include <mrpt/slam/CObservation2DRangeScan.h>
 #   include <mrpt/slam/CObservationOdometry.h>
     using namespace mrpt::slam;
+    #include <mrpt/utils.h>
 #endif
 
 #if MRPT_VERSION<0x150
@@ -41,7 +43,6 @@
 
 #include <mrpt/system/os.h>
 #include <mrpt/poses/CPose3D.h>
-#include <mrpt/utils.h>
 #include <mrpt/opengl.h>
 #include <mrpt/math/CHistogram.h>
 
