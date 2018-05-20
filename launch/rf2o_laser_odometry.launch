@@ -23,6 +23,7 @@
     <param name="init_pose_from_topic" value="/base_pose_ground_truth" /> # (Odom topic) Leave empty to start at point (0,0)
     <param name="freq" value="6.0"/>                            # Execution frequency.
     <param name="verbose" value="true" />                       # verbose
+    <param name="max_attempts_to_get_init_pose" value="30" />   # Maximum number of attempts to get the initial pose before assuming (0,0)
   </node>
   
 </launch>

@@ -35,12 +35,16 @@ CLaserOdometry2D::CLaserOdometry2D()
     ros::NodeHandle pn("~");
     pn.param<std::string>("laser_scan_topic",laser_scan_topic,"/laser_scan");
     pn.param<std::string>("odom_topic", odom_topic, "/odom_rf2o");
-    pn.param<std::string>("base_frame_id", base_frame_id, "/base_link");
-    pn.param<std::string>("odom_frame_id", odom_frame_id, "/odom");
+    pn.param<std::string>("base_frame_id", base_frame_id, "base_link");
+    pn.param<std::string>("odom_frame_id", odom_frame_id, "odom");
     pn.param<bool>("publish_tf", publish_tf, true);
     pn.param<std::string>("init_pose_from_topic", init_pose_from_topic, "/base_pose_ground_truth");
     pn.param<double>("freq",freq,10.0);
     pn.param<bool>("verbose", verbose, true);
+    pn.param<int>("max_attempts_to_get_init_pose", max_attempts_to_get_init_pose, 30);
+    pn.param<double>("X_Covariance", XCovar, 1e-2);
+    pn.param<double>("Y_Covariance", YCovar, 1e-1);
+    pn.param<double>("Z_Covariance", ZCovar, 1e-2);
 
     //Publishers and Subscribers
     //--------------------------    
@@ -1049,11 +1053,23 @@ void CLaserOdometry2D::PoseUpdate()
     odom.pose.pose.position.y = robot_pose.y();
     odom.pose.pose.position.z = 0.0;
     odom.pose.pose.orientation = tf::createQuaternionMsgFromYaw(robot_pose.yaw());
+    odom.pose.covariance[0] = XCovar;
+    odom.pose.covariance[7] = YCovar;
+    odom.pose.covariance[14] = ZCovar;
+    odom.pose.covariance[21] = 1e6;
+    odom.pose.covariance[28] = 1e6;
+    odom.pose.covariance[35] = 1e-2;
     //set the velocity
     odom.child_frame_id = base_frame_id;
     odom.twist.twist.linear.x = lin_speed;    //linear speed
     odom.twist.twist.linear.y = 0.0;
     odom.twist.twist.angular.z = ang_speed;   //angular speed
+    odom.twist.covariance[0] = XCovar;
+    odom.twist.covariance[7] = YCovar;
+    odom.twist.covariance[14] = ZCovar;
+    odom.twist.covariance[21] = 1e6;
+    odom.twist.covariance[28] = 1e6;
+    odom.twist.covariance[35] = 1e-6;    //publish the message
     //publish the message
     odom_pub.publish(odom);
 }
@@ -1111,6 +1127,8 @@ int main(int argc, char** argv)
     //----------
     ROS_INFO("[rf2o] initialization complete...Looping");
     ros::Rate loop_rate(myLaserOdom.freq);
+    int num_attempts_to_init_pose = 0;
+
     while (ros::ok())
     {
         ros::spinOnce();        //Check for new laser scans
@@ -1123,6 +1141,18 @@ int main(int argc, char** argv)
         else
         {
             ROS_WARN("[rf2o] Waiting for laser_scans....") ;
+            num_attempts_to_init_pose += 1;
+            if (num_attempts_to_init_pose > myLaserOdom.max_attempts_to_get_init_pose && !myLaserOdom.is_initialized())
+            {
+                myLaserOdom.GT_pose_initialized = true;
+                myLaserOdom.initial_robot_pose.pose.pose.position.x = 0;
+                myLaserOdom.initial_robot_pose.pose.pose.position.y = 0;
+                myLaserOdom.initial_robot_pose.pose.pose.position.z = 0;
+                myLaserOdom.initial_robot_pose.pose.pose.orientation.w = 0;
+                myLaserOdom.initial_robot_pose.pose.pose.orientation.x = 0;
+                myLaserOdom.initial_robot_pose.pose.pose.orientation.y = 0;
+                myLaserOdom.initial_robot_pose.pose.pose.orientation.z = 0;
+            }
         }
 
         loop_rate.sleep();
