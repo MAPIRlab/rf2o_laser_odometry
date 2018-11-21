@@ -17,24 +17,19 @@
 #define CLaserOdometry2D_H
 
 #include <ros/ros.h>
-#include <tf/transform_broadcaster.h>
-#include <tf/transform_listener.h>
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/LaserScan.h>
-#include <geometry_msgs/Twist.h>
 
 // MRPT related headers
 #include <mrpt/version.h>
 #if MRPT_VERSION>=0x130
-    #include <mrpt/obs/CObservation2DRangeScan.h>
-    #include <mrpt/obs/CObservationOdometry.h>
-    #include <mrpt/utils/CTicTac.h>
-    using namespace mrpt::obs;
+#   include <mrpt/obs/CObservation2DRangeScan.h>
+#   include <mrpt/obs/CObservationOdometry.h>
+    typedef mrpt::obs::CObservation2DRangeScan CObservation2DRangeScan;
 #else
 #   include <mrpt/slam/CObservation2DRangeScan.h>
 #   include <mrpt/slam/CObservationOdometry.h>
-    using namespace mrpt::slam;
-    #include <mrpt/utils.h>
+    typedef mrpt::poses::CObservation2DRangeScan CObservation2DRangeScan;
 #endif
 
 #if MRPT_VERSION<0x150
@@ -43,7 +38,8 @@
 
 #include <mrpt/system/os.h>
 #include <mrpt/poses/CPose3D.h>
-#include <mrpt/opengl.h>
+#include <mrpt/utils.h>
+//#include <mrpt/opengl.h>
 #include <mrpt/math/CHistogram.h>
 
 #include <boost/bind.hpp>
@@ -60,34 +56,26 @@ class CLaserOdometry2D
 public:
 	CLaserOdometry2D();
     ~CLaserOdometry2D();
-    bool is_initialized();
-    bool scan_available();
-    void Init();
-    void odometryCalculation();
 
-    std::string         laser_scan_topic;
-    std::string         odom_topic;
-    bool                publish_tf;
-    std::string         base_frame_id;
-    std::string         odom_frame_id;
-    std::string         init_pose_from_topic;
-    double              freq;
+    void Init(const sensor_msgs::LaserScan& scan,
+              const geometry_msgs::Pose& initial_robot_pose);
+
+    bool is_initialized();
+
+    void odometryCalculation(const sensor_msgs::LaserScan& scan);
+
+    void setLaserPose(const mrpt::poses::CPose3D& laser_pose);
+
+    const mrpt::poses::CPose3D& getIncrement() const;
+
+    const Eigen::Matrix<float, 3, 3>& getIncrementCovariance() const;
+
+    mrpt::poses::CPose3D& getPose();
+    const mrpt::poses::CPose3D& getPose() const;
 
 protected:
-    ros::NodeHandle             n;
-    sensor_msgs::LaserScan      last_scan;
-    bool                        module_initialized,first_laser_scan,new_scan_available, GT_pose_initialized, verbose;
-    tf::TransformListener       tf_listener;          //Do not put inside the callback
-    tf::TransformBroadcaster    odom_broadcaster;
-    nav_msgs::Odometry          initial_robot_pose;
 
-    //Subscriptions & Publishers
-    ros::Subscriber laser_sub, initPose_sub;
-    ros::Publisher odom_pub;
-
-    //CallBacks
-    void LaserCallBack(const sensor_msgs::LaserScan::ConstPtr& new_scan);
-    void initPoseCallBack(const nav_msgs::Odometry::ConstPtr& new_initPose);
+  bool verbose,module_initialized,first_laser_scan;
 
     // Internal Data
 	std::vector<Eigen::MatrixXf> range;
@@ -103,7 +91,7 @@ protected:
 	std::vector<Eigen::MatrixXf> yy_old;
 	std::vector<Eigen::MatrixXf> yy_warped;
 	std::vector<Eigen::MatrixXf> transformations;
-	
+
 	Eigen::MatrixXf range_wf;
 	Eigen::MatrixXf dtita;
 	Eigen::MatrixXf dt;
@@ -131,17 +119,24 @@ protected:
     unsigned int iter_irls;
 	float g_mask[5];
 
+  double lin_speed, ang_speed;
+
     //mrpt::gui::CDisplayWindowPlots window;
 	mrpt::utils::CTicTac		m_clock;
 	float		m_runtime;
-    ros::Time last_odom_time;
+    ros::Time last_odom_time, current_scan_time;
 
 	mrpt::math::CMatrixFloat31 kai_abs;
 	mrpt::math::CMatrixFloat31 kai_loc;
 	mrpt::math::CMatrixFloat31 kai_loc_old;
 	mrpt::math::CMatrixFloat31 kai_loc_level;
 
-	mrpt::poses::CPose3D laser_pose;
+  mrpt::poses::CPose3D last_increment;
+
+  mrpt::poses::CPose3D laser_pose_on_robot;
+  mrpt::poses::CPose3D laser_pose_on_robot_inv;
+
+  mrpt::poses::CPose3D laser_pose;
 	mrpt::poses::CPose3D laser_oldpose;
     mrpt::poses::CPose3D robot_pose;
     mrpt::poses::CPose3D robot_oldpose;
@@ -155,7 +150,7 @@ protected:
 	void calculateCoord();
 	void performWarping();
 	void calculaterangeDerivativesSurface();
-	void computeNormals();	
+	void computeNormals();
 	void computeWeights();
 	void findNullPoints();
 	void solveSystemOneLevel();
