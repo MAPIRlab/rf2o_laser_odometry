@@ -1,6 +1,13 @@
-cmake_minimum_required(VERSION 2.8.3)
-project(rf2o_laser_odometry)
-set (CMAKE_CXX_STANDARD 14)  # Require C++14
+PROJECT(rf2o_laser_odometry)
+
+CMAKE_MINIMUM_REQUIRED(VERSION 3.3)
+# Require C++17
+
+if(${CMAKE_VERSION} VERSION_LESS "3.8.0")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+else()
+	set(CMAKE_CXX_STANDARD 17)
+endif()
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -17,7 +24,6 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
-
 find_package(Eigen3 REQUIRED)
 
 ###################################
