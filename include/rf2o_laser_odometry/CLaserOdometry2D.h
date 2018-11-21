@@ -30,7 +30,6 @@
 #   include <mrpt/slam/CObservation2DRangeScan.h>
 #   include <mrpt/slam/CObservationOdometry.h>
     typedef mrpt::poses::CObservation2DRangeScan CObservation2DRangeScan;
-
 #endif
 
 #if MRPT_VERSION<0x150
