@@ -20,6 +20,8 @@
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
 
+#include <mutex>
+
 namespace rf2o {
 
 class CLaserOdometry2DNode : CLaserOdometry2D
@@ -56,6 +58,8 @@ public:
   //Subscriptions & Publishers
   ros::Subscriber laser_sub, initPose_sub;
   ros::Publisher odom_pub;
+
+  std::mutex data_mutex;
 
   bool scan_available();
 
@@ -104,8 +108,6 @@ CLaserOdometry2DNode::CLaserOdometry2DNode() :
     initial_robot_pose.pose.pose.orientation.z = 0;
   }
 
-  setLaserPoseFromTf();
-
   //Init variables
   module_initialized = false;
   first_laser_scan   = true;
@@ -123,6 +125,7 @@ bool CLaserOdometry2DNode::setLaserPoseFromTf()
   transform.setIdentity();
   try
   {
+    tf_listener.waitForTransform(base_frame_id, last_scan.header.frame_id, ros::Time(0), ros::Duration(1.0));
     tf_listener.lookupTransform(base_frame_id, last_scan.header.frame_id, ros::Time(0), transform);
     retrieved = true;
   }
@@ -161,6 +164,7 @@ bool CLaserOdometry2DNode::scan_available()
 
 void CLaserOdometry2DNode::process(const ros::TimerEvent&)
 {
+  std::lock_guard<std::mutex> guard(data_mutex);
   if( is_initialized() && scan_available() )
   {
     //Process odometry estimation
@@ -180,6 +184,7 @@ void CLaserOdometry2DNode::process(const ros::TimerEvent&)
 
 void CLaserOdometry2DNode::LaserCallBack(const sensor_msgs::LaserScan::ConstPtr& new_scan)
 {
+  std::lock_guard<std::mutex> guard(data_mutex);
   if (GT_pose_initialized)
   {
     //Keep in memory the last received laser_scan
@@ -196,6 +201,7 @@ void CLaserOdometry2DNode::LaserCallBack(const sensor_msgs::LaserScan::ConstPtr&
     }
     else
     {
+      setLaserPoseFromTf();
       init(last_scan, initial_robot_pose.pose.pose);
       first_laser_scan = false;
     }
@@ -204,6 +210,7 @@ void CLaserOdometry2DNode::LaserCallBack(const sensor_msgs::LaserScan::ConstPtr&
 
 void CLaserOdometry2DNode::initPoseCallBack(const nav_msgs::Odometry::ConstPtr& new_initPose)
 {
+  std::lock_guard<std::mutex> guard(data_mutex);
   //Initialize module on first GT pose. Else do Nothing!
   if (!GT_pose_initialized)
   {
@@ -220,7 +227,7 @@ void CLaserOdometry2DNode::publish()
   {
     //ROS_INFO("[rf2o] Publishing TF: [base_link] to [odom]");
     geometry_msgs::TransformStamped odom_trans;
-    odom_trans.header.stamp = ros::Time::now();
+    odom_trans.header.stamp = last_scan.header.stamp;
     odom_trans.header.frame_id = odom_frame_id;
     odom_trans.child_frame_id = base_frame_id;
     odom_trans.transform.translation.x = robot_pose_.translation()(0);
@@ -235,7 +242,7 @@ void CLaserOdometry2DNode::publish()
   //-------------------------------------------------
   //ROS_INFO("[rf2o] Publishing Odom Topic");
   nav_msgs::Odometry odom;
-  odom.header.stamp = ros::Time::now();
+  odom.header.stamp = last_scan.header.stamp;
   odom.header.frame_id = odom_frame_id;
   //set the position
   odom.pose.pose.position.x = robot_pose_.translation()(0);
