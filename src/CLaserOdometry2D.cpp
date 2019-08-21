@@ -156,7 +156,7 @@ void CLaserOdometry2D::init(const sensor_msgs::LaserScan& scan,
   kai_loc_old_ = MatrixS31::Zero();
 
   module_initialized = true;
-  last_odom_time = ros::Time::now();
+  last_odom_time = scan.header.stamp;
 }
 
 const CLaserOdometry2D::Pose3d& CLaserOdometry2D::getIncrement() const
@@ -292,7 +292,7 @@ void CLaserOdometry2D::createImagePyramid()
         //Inner pixels
         if ((u>1)&&(u<cols_i-2))
         {
-          if (dcenter > 0.f)
+          if (std::isfinite(dcenter) && dcenter > 0.f)
           {
             float sum = 0.f;
             float weight = 0.f;
@@ -316,7 +316,7 @@ void CLaserOdometry2D::createImagePyramid()
         //Boundary
         else
         {
-          if (dcenter > 0.f)
+          if (std::isfinite(dcenter) && dcenter > 0.f)
           {
             float sum = 0.f;
             float weight = 0.f;

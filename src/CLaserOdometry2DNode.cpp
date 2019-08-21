@@ -104,7 +104,6 @@ CLaserOdometry2DNode::CLaserOdometry2DNode() :
     initial_robot_pose.pose.pose.orientation.z = 0;
   }
 
-  setLaserPoseFromTf();
 
   //Init variables
   module_initialized = false;
@@ -196,6 +195,7 @@ void CLaserOdometry2DNode::LaserCallBack(const sensor_msgs::LaserScan::ConstPtr&
     }
     else
     {
+      setLaserPoseFromTf();
       init(last_scan, initial_robot_pose.pose.pose);
       first_laser_scan = false;
     }
@@ -218,9 +218,9 @@ void CLaserOdometry2DNode::publish()
   //---------------------------------------
   if (publish_tf)
   {
-    //ROS_INFO("[rf2o] Publishing TF: [base_link] to [odom]");
+    ROS_DEBUG("[rf2o] Publishing TF: [base_link] to [odom]");
     geometry_msgs::TransformStamped odom_trans;
-    odom_trans.header.stamp = ros::Time::now();
+    odom_trans.header.stamp = last_odom_time;
     odom_trans.header.frame_id = odom_frame_id;
     odom_trans.child_frame_id = base_frame_id;
     odom_trans.transform.translation.x = robot_pose_.translation()(0);
@@ -233,9 +233,9 @@ void CLaserOdometry2DNode::publish()
 
   //next, we'll publish the odometry message over ROS
   //-------------------------------------------------
-  //ROS_INFO("[rf2o] Publishing Odom Topic");
+  ROS_DEBUG ("[rf2o] Publishing Odom Topic");
   nav_msgs::Odometry odom;
-  odom.header.stamp = ros::Time::now();
+  odom.header.stamp = last_odom_time;
   odom.header.frame_id = odom_frame_id;
   //set the position
   odom.pose.pose.position.x = robot_pose_.translation()(0);
