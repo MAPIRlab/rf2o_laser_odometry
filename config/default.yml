@@ -1,0 +1,22 @@
+verbose: false              # Toggle verbosity level
+laser_scan_topic: "/scan"   # Topic where the LiDAR scans are being placed
+odom_topic: "/odo_laser"    # Topic where the odometry messages are being published
+publish_tf: true            # Publish transform (base_link -> odom)
+base_frame_id: "base_link"  # Robot base frame id
+odom_frame_id: "odom"       # Odometry frame id
+init_pose_from_topic: ""    # Topic from where the initial position of the robot should be taken
+frequency: 6.0              # Publishing frequency (Hz)
+
+pose_covariance_matrix: [7.8163e-05,          0,          0,          0,          0,          0,
+                                  0, 7.8163e-05,          0,          0,          0,          0,
+                                  0,          0, 7.8163e-05,          0,          0,          0,
+                                  0,          0,          0, 7.8163e-05,          0,          0,
+                                  0,          0,          0,          0, 7.8163e-05,          0,
+                                  0,          0,          0,          0,          0, 7.8163e-05]
+twist_covariance_matrix: [0.1,         0,  0,  0,  0,           0,
+                            0, 6.3142e-7,  0,  0,  0,           0,
+                            0,         0,  0,  0,  0,           0,
+                            0,         0,  0,  0,  0,           0,
+                            0,         0,  0,  0,  0,           0,
+                            0,         0,  0,  0,  0,  1.1739e-05]
+
