@@ -186,6 +186,7 @@ private:
     bool CheckCovarianceArray(const nav_msgs::Odometry::_pose_type::_covariance_type& place, const std::vector<double>& matrix);
     void PreparePoseCovariance(nav_msgs::Odometry& message, const std::vector<double>& matrix);
     void PrepareTwistCovariance(nav_msgs::Odometry& message, const std::vector<double>& matrix);
+
 public:
 
     CLaserOdometry2DNode();
@@ -205,6 +206,8 @@ public:
     std::string         base_frame_id;
     std::string         odom_frame_id;
     std::string         init_pose_from_topic;
+    std::string         pose_covariance_uploader_topic;
+    std::string         twist_covariance_uploader_topic;
 
     ros::NodeHandle             n;
     sensor_msgs::LaserScan      last_scan;
@@ -220,8 +223,9 @@ public:
     bool scan_available();
 
     //CallBacks
-    void LaserCallBack(const sensor_msgs::LaserScan::ConstPtr& new_scan);
-    void initPoseCallBack(const nav_msgs::Odometry::ConstPtr& new_initPose);
+    virtual void LaserCallBack(const sensor_msgs::LaserScan::ConstPtr& new_scan);
+    virtual void initPoseCallBack(const nav_msgs::Odometry::ConstPtr& new_initPose);
+
 };
 
 } /* namespace rf2o */
