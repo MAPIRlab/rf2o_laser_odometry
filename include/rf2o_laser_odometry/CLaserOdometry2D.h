@@ -206,8 +206,6 @@ public:
     std::string         base_frame_id;
     std::string         odom_frame_id;
     std::string         init_pose_from_topic;
-    std::string         pose_covariance_uploader_topic;
-    std::string         twist_covariance_uploader_topic;
 
     ros::NodeHandle             n;
     sensor_msgs::LaserScan      last_scan;
