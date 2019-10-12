@@ -7,7 +7,7 @@ build:
   stage: build
   script:
     ## создание символьной ссылки на пакет rf2o_laser_odometry
-    - cp -v ../rf2o_laser_odometry ./src/
+    - cp -vr ../rf2o_laser_odometry ./src/
     - ls -lah ../rf2o_laser_odometry/
     - ls -lah ./src/rf2o_laser_odometry
     ## запуск catkin_make с перенаправлением вывода для отслеживания ошибок
