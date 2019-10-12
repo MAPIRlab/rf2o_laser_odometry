@@ -2,7 +2,7 @@
 <package>
 
   <name>rf2o_laser_odometry</name>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
   <description>
     Estimation of 2D odometry based on planar laser scans. Useful for mobile robots with innacurate base odometry.
     For full description of the algorithm, please refer to:
@@ -11,6 +11,7 @@
   </description>
 
   <maintainer email="jgmonroy@uma.es">Javier G. Monroy</maintainer>
+  <maintainer email="twdragon@bmstu.ru">Andrei Vukolov</maintainer>
   <author email="marianojt@uma.es"> Mariano Jaimez</author>
   <author email="jgmonroy@uma.es"> Javier G. Monroy</author>
   <license>GPL v3</license> 

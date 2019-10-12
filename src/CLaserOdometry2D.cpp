@@ -953,8 +953,14 @@ void CLaserOdometry2D::PoseUpdate()
     //-------------------------------------------------------------------------------------
     double time_inc_sec = (current_scan_time - last_odom_time).toSec();
     last_odom_time = current_scan_time;
-    lin_speed = acu_trans(0,2) / time_inc_sec;
+    
+    /* lin_speed = acu_trans(0,2) / time_inc_sec; */
+    
     //double lin_speed = sqrt( mrpt::math::square(robot_oldpose.x()-robot_pose.x()) + mrpt::math::square(robot_oldpose.y()-robot_pose.y()) )/time_inc_sec;
+
+    linear_vx = acu_trans(0,2) / time_inc_sec;
+    linear_vy = acu_trans(1,2) / time_inc_sec;
+    lin_speed = std::sqrt(std::pow(linear_vx, 2) + std::pow(linear_vy, 2));
 
     double ang_inc = rf2o::getYaw(robot_pose_.rotation()) -
             rf2o::getYaw(robot_oldpose_.rotation());
