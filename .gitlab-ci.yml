@@ -1,9 +1,7 @@
 before_script:
-  ## очистка результатов предыдущей работы
-  - cd ..
-  - rm -rvf workspace/*
-  - mkdir -p workspace/src
-  - cd workspace
+    - cd ..
+    - mkdir -p workspace/src
+    - cd workspace
 
 build:
   stage: build
@@ -12,4 +10,9 @@ build:
     - ln -s ../rf2o_laser_odometry ./src/rf2o_laser_odometry
     ## запуск catkin_make с перенаправлением вывода для отслеживания ошибок
     - catkin_make --make-args -j 4 2>&1
+
+
+after_script:
+    - cd ..
+    - rm -rvf workspace
 
