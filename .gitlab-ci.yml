@@ -8,8 +8,8 @@ build:
   script:
     ## создание символьной ссылки на пакет rf2o_laser_odometry
     - ln -s ../rf2o_laser_odometry ./src/rf2o_laser_odometry
-    - ls -lah ./src/rf2o_laser_odometry/
     - ls -lah ../rf2o_laser_odometry/
+    - ls -lah ./src/rf2o_laser_odometry/
     ## запуск catkin_make с перенаправлением вывода для отслеживания ошибок
     - catkin_make --make-args -j 4 2>&1
 
