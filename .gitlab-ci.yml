@@ -1,0 +1,20 @@
+before_script:
+    - cd ..
+    - mkdir -pv workspace/src
+    - cd workspace
+
+build:
+  stage: build
+  script:
+    ## создание символьной ссылки на пакет rf2o_laser_odometry
+    - cp -vr ../rf2o_laser_odometry ./src/
+    - ls -lah ../rf2o_laser_odometry/
+    - ls -lah ./src/rf2o_laser_odometry
+    ## запуск catkin_make с перенаправлением вывода для отслеживания ошибок
+    - catkin_make --make-args -j 4 2>&1
+
+
+after_script:
+    - cd ..
+    - rm -rvf workspace
+

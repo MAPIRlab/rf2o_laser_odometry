@@ -140,7 +140,8 @@ protected:
     unsigned int iter_irls;
     float g_mask[5];
 
-    double lin_speed, ang_speed;
+    double lin_speed, ang_speed;            // Full vector lengths
+    double linear_vx, linear_vy;            // Orthogonal lengths
 
     ros::WallDuration	m_runtime;
     ros::Time last_odom_time, current_scan_time;

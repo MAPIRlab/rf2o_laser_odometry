@@ -235,8 +235,8 @@ void CLaserOdometry2DNode::publish()
     odom.pose.pose.orientation = tf::createQuaternionMsgFromYaw(rf2o::getYaw(robot_pose_.rotation()));
     //set the velocity
     odom.child_frame_id = base_frame_id;
-    odom.twist.twist.linear.x = lin_speed;    //linear speed
-    odom.twist.twist.linear.y = 0.0;
+    odom.twist.twist.linear.x = linear_vx;    //linear speed
+    odom.twist.twist.linear.y = linear_vy;
     odom.twist.twist.angular.z = ang_speed;   //angular speed
     //publish the message
     PreparePoseCovariance(odom, linear_covariance_matrix);
