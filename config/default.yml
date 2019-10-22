@@ -5,7 +5,7 @@ publish_tf: false           # Publish transform (base_link -> odom)
 base_frame_id: "base_link"  # Robot base frame id
 odom_frame_id: "odom"       # Odometry frame id
 init_pose_from_topic: ""    # Topic from where the initial position of the robot should be taken
-frequency: 40.0             # Publishing frequency (Hz)
+freq: 10.0                  # Publishing frequency (Hz)
 
 # Covariance Matrices
 pose_covariance_matrix: [7.8163e-05,          0,          0,          0,          0,          0,
