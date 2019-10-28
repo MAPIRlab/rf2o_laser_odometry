@@ -62,6 +62,7 @@ CLaserOdometry2DNode::CLaserOdometry2DNode() :
     //----------------
     ros::NodeHandle pn("~");
     pn.param<std::string>("laser_scan_topic",laser_scan_topic,"/laser_scan");
+    pn.param<std::string>("laser_frame_id", laser_frame_id, "/laser");
     pn.param<std::string>("odom_topic", odom_topic, "/odom_rf2o");
     pn.param<std::string>("base_frame_id", base_frame_id, "/base_link");
     pn.param<std::string>("odom_frame_id", odom_frame_id, "/odom");
@@ -112,9 +113,10 @@ bool CLaserOdometry2DNode::setLaserPoseFromTf()
     // This allow estimation of the odometry with respect to the robot base reference system.
     tf::StampedTransform transform;
     transform.setIdentity();
+    ros::Duration(2.0).sleep();
     try
     {
-        tf_listener.lookupTransform(base_frame_id, last_scan.header.frame_id, ros::Time(0), transform);
+        tf_listener.lookupTransform(base_frame_id, laser_frame_id, ros::Time(0), transform);
         retrieved = true;
     }
     catch (tf::TransformException &ex)
@@ -124,6 +126,7 @@ bool CLaserOdometry2DNode::setLaserPoseFromTf()
         retrieved = false;
     }
 
+    //ROS_INFO("YAW ANGLE: %f", tf::getYaw(transform.getRotation()));
     //TF:transform -> Eigen::Isometry3d
 
     const tf::Matrix3x3 &basis = transform.getBasis();
@@ -235,7 +238,15 @@ void CLaserOdometry2DNode::publish()
     odom.pose.pose.orientation = tf::createQuaternionMsgFromYaw(rf2o::getYaw(robot_pose_.rotation()));
     //set the velocity
     odom.child_frame_id = base_frame_id;
-    odom.twist.twist.linear.x = linear_vx;    //linear speed
+    double laser_yaw = rf2o::getYaw(  laser_pose_on_robot_.rotation() );
+    if( (laser_yaw < (3.1415926 / 2)) || (laser_yaw > (-3.1415926 / 2)) )
+    {
+        odom.twist.twist.linear.x = linear_vx * std::cos(laser_yaw);
+    }
+    else
+    {
+        odom.twist.twist.linear.x = -linear_vx * std::cos(laser_yaw);
+    }
     odom.twist.twist.linear.y = linear_vy;
     odom.twist.twist.angular.z = ang_speed;   //angular speed
     //publish the message

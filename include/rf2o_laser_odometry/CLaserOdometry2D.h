@@ -207,6 +207,7 @@ public:
     std::string         base_frame_id;
     std::string         odom_frame_id;
     std::string         init_pose_from_topic;
+    std::string         laser_frame_id;
 
     ros::NodeHandle             n;
     sensor_msgs::LaserScan      last_scan;

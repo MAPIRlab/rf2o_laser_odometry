@@ -7,17 +7,4 @@
     </node>
 </launch>
 
-<!-- 
-  This node presents a fast and precise method to estimate the planar motion of a lidar
-  from consecutive range scans. It is very useful for the estimation of the robot odometry from
-  2D laser range measurements.
-  
-  For more info please visit: http://mapir.isa.uma.es/work/rf2o
-  
-  Requirements:
-  - 2D laser scan, publishing sensor_msgs::LaserScan
-  - TF transform from the laser to the robot base
-  - MRPT (http://www.mrpt.org/)
-        - Tested with v1.3 (official ubuntu release)
--->
 
