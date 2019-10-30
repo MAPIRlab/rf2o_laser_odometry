@@ -69,6 +69,8 @@ class CLaserOdometry2D
 {
 public:
 
+    volatile bool unreliable;
+
     using Scalar = float;
 
     using Pose2d = Eigen::Isometry2d;
@@ -166,6 +168,10 @@ protected:
     std::vector<double> linear_covariance_matrix;
     std::vector<double> angular_covariance_matrix;
 
+    nav_msgs::Odometry          fallback_pose;
+    ros::Time                   fallback_time;
+    bool fallback_active;
+
     // Methods
     void createImagePyramid();
     void calculateCoord();
@@ -187,6 +193,7 @@ private:
     bool CheckCovarianceArray(const nav_msgs::Odometry::_pose_type::_covariance_type& place, const std::vector<double>& matrix);
     void PreparePoseCovariance(nav_msgs::Odometry& message, const std::vector<double>& matrix);
     void PrepareTwistCovariance(nav_msgs::Odometry& message, const std::vector<double>& matrix);
+    void BoostCovarianceMatrix(std::vector<double>& covariance);
 
 public:
 
@@ -208,6 +215,7 @@ public:
     std::string         odom_frame_id;
     std::string         init_pose_from_topic;
     std::string         laser_frame_id;
+    std::string         pose_fallback_topic;
 
     ros::NodeHandle             n;
     sensor_msgs::LaserScan      last_scan;
@@ -216,15 +224,23 @@ public:
     tf::TransformBroadcaster    odom_broadcaster;
     nav_msgs::Odometry          initial_robot_pose;
 
+    unsigned int                outdated;
+    bool                        dynamic_covariance_boost;
+    double                      dynamic_covariance_boost_initial_multiplier;
+    bool                        dynamic_covariance_boost_progressive;
+    double                      dynamic_covariance_boost_progression_factor;
+
     //Subscriptions & Publishers
     ros::Subscriber laser_sub, initPose_sub;
     ros::Publisher odom_pub;
+    ros::Subscriber pose_fallback;
 
     bool scan_available();
 
     //CallBacks
     virtual void LaserCallBack(const sensor_msgs::LaserScan::ConstPtr& new_scan);
     virtual void initPoseCallBack(const nav_msgs::Odometry::ConstPtr& new_initPose);
+    virtual void PoseFallbackCallback(const nav_msgs::Odometry::ConstPtr& fallback_pose_);
 
 };
 

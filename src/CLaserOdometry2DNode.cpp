@@ -54,7 +54,8 @@ void CLaserOdometry2DNode::PrepareTwistCovariance(nav_msgs::Odometry &message, c
 }
 
 CLaserOdometry2DNode::CLaserOdometry2DNode() :
-    CLaserOdometry2D()
+    CLaserOdometry2D(),
+    outdated(0)
 {
     ROS_INFO("Initializing RF2O node...");
 
@@ -72,12 +73,21 @@ CLaserOdometry2DNode::CLaserOdometry2DNode() :
     pn.param<bool>("verbose", verbose, true);
     pn.param<std::vector<double> >("pose_covariance_matrix", linear_covariance_matrix, std::vector<double>());
     pn.param<std::vector<double> >("twist_covariance_matrix", angular_covariance_matrix, std::vector<double>());
+    pn.param<bool>("dynamic_covariance_boost/enable", dynamic_covariance_boost, false);
+    pn.param<double>("dynamic_covariance_boost/initial_multiplier", dynamic_covariance_boost_initial_multiplier, 1.f);
+    pn.param<bool>("dynamic_covariance_boost/progressive", dynamic_covariance_boost_progressive, false);
+    pn.param<double>("dynamic_covariance_boost/progression_factor", dynamic_covariance_boost_progression_factor, 0.f);
+    pn.param<std::string>("dynamic_covariance_boost/pose_fallback_topic", pose_fallback_topic, "");
 
     //Publishers and Subscribers
     //--------------------------
     odom_pub  = pn.advertise<nav_msgs::Odometry>(odom_topic, 5);
     laser_sub = n.subscribe<sensor_msgs::LaserScan>(laser_scan_topic,1,&CLaserOdometry2DNode::LaserCallBack,this);
 
+    if(pose_fallback_topic != "")
+    {
+        pose_fallback = n.subscribe(pose_fallback_topic, 1, &CLaserOdometry2DNode::PoseFallbackCallback, this);
+    }
     //init pose??
     if (init_pose_from_topic != "")
     {
@@ -206,6 +216,13 @@ void CLaserOdometry2DNode::initPoseCallBack(const nav_msgs::Odometry::ConstPtr& 
     }
 }
 
+void CLaserOdometry2DNode::PoseFallbackCallback(const nav_msgs::Odometry::ConstPtr &fallback_pose_)
+{
+    fallback_pose = *fallback_pose_;
+    fallback_time = ros::Time::now();
+    if(!fallback_active) fallback_active = true;
+}
+
 void CLaserOdometry2DNode::publish()
 {
     //first, we'll publish the odometry over tf
@@ -249,10 +266,32 @@ void CLaserOdometry2DNode::publish()
     }
     odom.twist.twist.linear.y = linear_vy;
     odom.twist.twist.angular.z = ang_speed;   //angular speed
-    //publish the message
-    PreparePoseCovariance(odom, linear_covariance_matrix);
-    PrepareTwistCovariance(odom, angular_covariance_matrix);
+    //Prepare covariance in case of dynamic boost
+    std::vector<double> pub_linear_covariance = linear_covariance_matrix;
+    std::vector<double> pub_angular_covariance = angular_covariance_matrix;
+    if(dynamic_covariance_boost && unreliable)
+    {
+        BoostCovarianceMatrix(pub_linear_covariance);
+        BoostCovarianceMatrix(pub_angular_covariance);
+        outdated++;
+    }
+    if(!unreliable) outdated = 0;
+    PreparePoseCovariance(odom, pub_linear_covariance);
+    PrepareTwistCovariance(odom, pub_angular_covariance);
     odom_pub.publish(odom);
+}
+
+void CLaserOdometry2DNode::BoostCovarianceMatrix(std::vector<double>& covariance)
+{
+    for(auto e = covariance.begin(); e != covariance.end(); e++)
+    {
+        *e *= dynamic_covariance_boost_initial_multiplier;
+        if(dynamic_covariance_boost_progressive)
+            *e += dynamic_covariance_boost_progression_factor * outdated;
+    }
+    ROS_INFO_COND(verbose, "[COVARIANCE BOOST] Boosted by init %.3f with progression factor %.3f",
+                  dynamic_covariance_boost_initial_multiplier,
+                  dynamic_covariance_boost_progression_factor);
 }
 
 } /* namespace rf2o */

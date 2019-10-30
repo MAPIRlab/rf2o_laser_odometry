@@ -24,6 +24,7 @@ namespace rf2o {
 //---------------------------------------------
 
 CLaserOdometry2D::CLaserOdometry2D() :
+    unreliable(false),
     verbose(false),
     module_initialized(false),
     first_laser_scan(true),
@@ -33,7 +34,8 @@ CLaserOdometry2D::CLaserOdometry2D() :
     laser_pose_(Pose3d::Identity()),
     laser_oldpose_(Pose3d::Identity()),
     robot_pose_(Pose3d::Identity()),
-    robot_oldpose_(Pose3d::Identity())
+    robot_oldpose_(Pose3d::Identity()),
+    fallback_active(false)
 {
     //
 }
@@ -812,8 +814,25 @@ bool CLaserOdometry2D::filterLevelSolution()
     if (eigensolver.info() != Eigen::Success)
     {
         ROS_WARN_COND(verbose, "[rf2o] ERROR: Eigensolver couldn't find a solution. Pose is not updated");
+        unreliable = true;
+        if(fallback_active)
+        {
+            Pose3d robot_initial_pose = Pose3d::Identity();
+            robot_initial_pose = Eigen::Quaterniond(fallback_pose.pose.pose.orientation.w,
+                                                    fallback_pose.pose.pose.orientation.x,
+                                                    fallback_pose.pose.pose.orientation.y,
+                                                    fallback_pose.pose.pose.orientation.z);
+            robot_initial_pose.translation()(0) = fallback_pose.pose.pose.position.x;
+            robot_initial_pose.translation()(1) = fallback_pose.pose.pose.position.y;
+            laser_pose_    = robot_initial_pose * laser_pose_on_robot_;
+            laser_oldpose_ = laser_pose_;
+            last_odom_time = fallback_time;
+            ROS_WARN_COND(verbose, "[WARNING] Fallback pose updated %f", fallback_time.toSec());
+        }
         return false;
     }
+    else
+        unreliable = false;
 
     //First, we have to describe both the new linear and angular speeds in the "eigenvector" basis
     //-------------------------------------------------------------------------------------------------

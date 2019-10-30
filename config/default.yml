@@ -1,24 +1,30 @@
-verbose: false              # Toggle verbosity level
+verbose: true              # Toggle verbosity level
 laser_scan_topic: "/scan"   # Topic where the LiDAR scans are being placed
 laser_frame_id: "backward_laser" # Laser scan frame ID
 odom_topic: "/odo_laser"    # Topic where the odometry messages are being published
 publish_tf: false           # Publish transform (base_link -> odom)
 base_frame_id: "base_link"  # Robot base frame id
-odom_frame_id: "odom_backward"       # Odometry frame id
+odom_frame_id: "odom"       # Odometry frame id
 init_pose_from_topic: ""    # Topic from where the initial position of the robot should be taken
-freq: 10.0                  # Publishing frequency (Hz)
+freq: 20.0                  # Publishing frequency (Hz)
+dynamic_covariance_boost:   # Dynamic covariance boost: multiply covariance matrix by scalar
+    enable: true            # when the obtained pose is unreliable
+    initial_multiplier: 1.0e+4
+    progressive: false
+    progression_factor: 100
+    pose_fallback_topic: "/odometry/filtered"
 
 # Covariance Matrices
-pose_covariance_matrix: [7.8163e-05,          0,          0,          0,          0,          0,
-                                  0, 7.8163e-05,          0,          0,          0,          0,
-                                  0,          0, 7.8163e-05,          0,          0,          0,
-                                  0,          0,          0, 7.8163e-05,          0,          0,
-                                  0,          0,          0,          0, 7.8163e-05,          0,
-                                  0,          0,          0,          0,          0, 7.8163e-05]
-twist_covariance_matrix: [7.8163e-05,           0,       0,       0,       0,           0,
-                                    0, 7.8163e-05,       0,       0,       0,           0,
-                                    0,          0,  1.0e-9,       0,       0,           0,
-                                    0,          0,       0,  1.0e-9,       0,           0,
-                                    0,          0,       0,       0,  1.0e-9,           0,
-                                    0,          0,       0,       0,       0,  1.1739e-05]
+pose_covariance_matrix: [7.8163e-01,          0,          0,          0,          0,          0,
+                                  0, 7.8163e-01,          0,          0,          0,          0,
+                                  0,          0, 7.8163e-01,          0,          0,          0,
+                                  0,          0,          0, 7.8163e-01,          0,          0,
+                                  0,          0,          0,          0, 7.8163e-01,          0,
+                                  0,          0,          0,          0,          0, 7.8163e-01]
+twist_covariance_matrix: [7.8163e-01,           0,       0,       0,       0,           0,
+                                    0, 7.8163e-01,       0,       0,       0,           0,
+                                    0,          0,  1.0e-1,       0,       0,           0,
+                                    0,          0,       0,  1.0e-1,       0,           0,
+                                    0,          0,       0,       0,  1.0e-1,           0,
+                                    0,          0,       0,       0,       0,  1.1739e-01]
 
