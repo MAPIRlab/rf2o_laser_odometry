@@ -216,6 +216,7 @@ public:
     std::string         init_pose_from_topic;
     std::string         laser_frame_id;
     std::string         pose_fallback_topic;
+    std::string         velocity_fallback_topic;
 
     ros::NodeHandle             n;
     sensor_msgs::LaserScan      last_scan;
@@ -229,11 +230,20 @@ public:
     double                      dynamic_covariance_boost_initial_multiplier;
     bool                        dynamic_covariance_boost_progressive;
     double                      dynamic_covariance_boost_progression_factor;
+    bool                        velocity_thresholds_enabled;
+    double                      linear_velocity_threshold_x;
+    double                      linear_velocity_threshold_y;
+    double                      angular_velocity_threshold;
+    bool                        velocity_fallback_active;
+    double                      velocity_fallback_x;
+    double                      velocity_fallback_y;
+    double                      velocity_fallback_angular;
 
     //Subscriptions & Publishers
     ros::Subscriber laser_sub, initPose_sub;
     ros::Publisher odom_pub;
     ros::Subscriber pose_fallback;
+    ros::Subscriber velocity_fallback;
 
     bool scan_available();
 
@@ -241,6 +251,7 @@ public:
     virtual void LaserCallBack(const sensor_msgs::LaserScan::ConstPtr& new_scan);
     virtual void initPoseCallBack(const nav_msgs::Odometry::ConstPtr& new_initPose);
     virtual void PoseFallbackCallback(const nav_msgs::Odometry::ConstPtr& fallback_pose_);
+    virtual void VelocityFallbackCallback(const nav_msgs::Odometry::ConstPtr& fallback_pose_);
 
 };
 

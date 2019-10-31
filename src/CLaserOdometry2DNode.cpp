@@ -55,7 +55,8 @@ void CLaserOdometry2DNode::PrepareTwistCovariance(nav_msgs::Odometry &message, c
 
 CLaserOdometry2DNode::CLaserOdometry2DNode() :
     CLaserOdometry2D(),
-    outdated(0)
+    outdated(0),
+    velocity_fallback_active(false)
 {
     ROS_INFO("Initializing RF2O node...");
 
@@ -77,7 +78,12 @@ CLaserOdometry2DNode::CLaserOdometry2DNode() :
     pn.param<double>("dynamic_covariance_boost/initial_multiplier", dynamic_covariance_boost_initial_multiplier, 1.f);
     pn.param<bool>("dynamic_covariance_boost/progressive", dynamic_covariance_boost_progressive, false);
     pn.param<double>("dynamic_covariance_boost/progression_factor", dynamic_covariance_boost_progression_factor, 0.f);
-    pn.param<std::string>("dynamic_covariance_boost/pose_fallback_topic", pose_fallback_topic, "");
+    pn.param<std::string>("pose_fallback/continuous_fallback_topic", pose_fallback_topic, "");
+    pn.param<std::string>("pose_fallback/velocity_fallback_topic", velocity_fallback_topic, pose_fallback_topic);
+    pn.param<bool>("pose_fallback/enable_thresholds", velocity_thresholds_enabled, false);
+    pn.param<double>("pose_fallback/linear_velocity_threshold_x", linear_velocity_threshold_x, 1.0e+6);
+    pn.param<double>("pose_fallback/linear_velocity_threshold_y", linear_velocity_threshold_y, linear_velocity_threshold_x);
+    pn.param<double>("pose_fallback/angular_velocity_threshold", angular_velocity_threshold, 1.0e+6);
 
     //Publishers and Subscribers
     //--------------------------
@@ -87,6 +93,10 @@ CLaserOdometry2DNode::CLaserOdometry2DNode() :
     if(pose_fallback_topic != "")
     {
         pose_fallback = n.subscribe(pose_fallback_topic, 1, &CLaserOdometry2DNode::PoseFallbackCallback, this);
+    }
+    if(velocity_fallback_topic != "")
+    {
+        velocity_fallback = n.subscribe(velocity_fallback_topic, 1, &CLaserOdometry2DNode::VelocityFallbackCallback, this);
     }
     //init pose??
     if (init_pose_from_topic != "")
@@ -223,6 +233,14 @@ void CLaserOdometry2DNode::PoseFallbackCallback(const nav_msgs::Odometry::ConstP
     if(!fallback_active) fallback_active = true;
 }
 
+void CLaserOdometry2DNode::VelocityFallbackCallback(const nav_msgs::Odometry::ConstPtr &fallback_pose_)
+{
+    if(!velocity_fallback_active) velocity_fallback_active = true;
+    velocity_fallback_x = fallback_pose_->twist.twist.linear.x;
+    velocity_fallback_y = fallback_pose_->twist.twist.linear.y;
+    velocity_fallback_angular = fallback_pose_->twist.twist.angular.z;
+}
+
 void CLaserOdometry2DNode::publish()
 {
     //first, we'll publish the odometry over tf
@@ -253,19 +271,49 @@ void CLaserOdometry2DNode::publish()
     odom.pose.pose.position.y = robot_pose_.translation()(1);
     odom.pose.pose.position.z = 0.0;
     odom.pose.pose.orientation = tf::createQuaternionMsgFromYaw(rf2o::getYaw(robot_pose_.rotation()));
-    //set the velocity
     odom.child_frame_id = base_frame_id;
+    //set the velocity
     double laser_yaw = rf2o::getYaw(  laser_pose_on_robot_.rotation() );
     if( (laser_yaw < (3.1415926 / 2)) || (laser_yaw > (-3.1415926 / 2)) )
     {
         odom.twist.twist.linear.x = linear_vx * std::cos(laser_yaw);
+        odom.twist.twist.linear.y = linear_vy * std::cos(laser_yaw);
     }
     else
     {
         odom.twist.twist.linear.x = -linear_vx * std::cos(laser_yaw);
+        odom.twist.twist.linear.y = -linear_vy * std::cos(laser_yaw);
     }
-    odom.twist.twist.linear.y = linear_vy;
-    odom.twist.twist.angular.z = ang_speed;   //angular speed
+    //odom.twist.twist.linear.y = linear_vy;
+    odom.twist.twist.angular.z = ang_speed;
+
+    if(velocity_thresholds_enabled && velocity_fallback_active)
+    {
+        std::string verbosity_msg("Velocity thresholds\t");
+        if(std::abs(linear_vx - velocity_fallback_x) >
+                linear_velocity_threshold_x)
+        {
+            odom.twist.twist.linear.x = velocity_fallback_x;
+            verbosity_msg +=    "| [X] ";
+        }
+        else verbosity_msg +=   "|  X  ";
+        if(std::abs(linear_vy - velocity_fallback_y) >
+                linear_velocity_threshold_y)
+        {
+            odom.twist.twist.linear.y = velocity_fallback_y;
+            verbosity_msg +=    "| [Y] ";
+        }
+        else verbosity_msg +=   "|  Y  ";
+        if(std::abs(ang_speed - velocity_fallback_angular) >
+                angular_velocity_threshold)
+        {
+            odom.twist.twist.angular.z = velocity_fallback_angular;
+            verbosity_msg +=    "| [W] ";
+        }
+        else verbosity_msg +=   "|  W  ";
+        ROS_WARN_COND(verbose, "%s", verbosity_msg.c_str());
+    }
+
     //Prepare covariance in case of dynamic boost
     std::vector<double> pub_linear_covariance = linear_covariance_matrix;
     std::vector<double> pub_angular_covariance = angular_covariance_matrix;
@@ -289,9 +337,9 @@ void CLaserOdometry2DNode::BoostCovarianceMatrix(std::vector<double>& covariance
         if(dynamic_covariance_boost_progressive)
             *e += dynamic_covariance_boost_progression_factor * outdated;
     }
-    ROS_INFO_COND(verbose, "[COVARIANCE BOOST] Boosted by init %.3f with progression factor %.3f",
-                  dynamic_covariance_boost_initial_multiplier,
-                  dynamic_covariance_boost_progression_factor);
+//    ROS_INFO_COND(verbose, "[COVARIANCE BOOST] Boosted by init %.3f with progression factor %.3f",
+//                  dynamic_covariance_boost_initial_multiplier,
+//                  dynamic_covariance_boost_progression_factor);
 }
 
 } /* namespace rf2o */

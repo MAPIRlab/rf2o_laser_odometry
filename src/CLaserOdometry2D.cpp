@@ -827,6 +827,8 @@ bool CLaserOdometry2D::filterLevelSolution()
             laser_pose_    = robot_initial_pose * laser_pose_on_robot_;
             laser_oldpose_ = laser_pose_;
             last_odom_time = fallback_time;
+            robot_pose_ = robot_initial_pose;
+            robot_oldpose_ = robot_pose_;
             ROS_WARN_COND(verbose, "[WARNING] Fallback pose updated %f", fallback_time.toSec());
         }
         return false;
@@ -842,7 +844,7 @@ bool CLaserOdometry2D::filterLevelSolution()
 
     kai_b = Bii.colPivHouseholderQr().solve(kai_loc_level_);
 
-    assert((kai_loc_level_).isApprox(Bii*kai_b, 1e-5) && "Ax=b has no solution." && __LINE__);
+    //assert((kai_loc_level_).isApprox(Bii*kai_b, 1e-5) && "Ax=b has no solution." && __LINE__);
 
     //Second, we have to describe both the old linear and angular speeds in the "eigenvector" basis too
     //-------------------------------------------------------------------------------------------------
@@ -867,7 +869,7 @@ bool CLaserOdometry2D::filterLevelSolution()
     Eigen::Matrix<float,3,1> kai_b_old;
     kai_b_old = Bii.colPivHouseholderQr().solve(kai_loc_sub);
 
-    assert((kai_loc_sub).isApprox(Bii*kai_b_old, 1e-5) && "Ax=b has no solution." && __LINE__);
+    //assert((kai_loc_sub).isApprox(Bii*kai_b_old, 1e-5) && "Ax=b has no solution." && __LINE__);
 
     //Filter speed
     const float cf = 15e3f*std::exp(-float(int(level))),
@@ -883,7 +885,7 @@ bool CLaserOdometry2D::filterLevelSolution()
     //Transform filtered speed to local reference frame and compute transformation
     Eigen::Matrix<float, 3, 1> kai_loc_fil = Bii.inverse().colPivHouseholderQr().solve(kai_b_fil);
 
-    assert((kai_b_fil).isApprox(Bii.inverse()*kai_loc_fil, 1e-5) && "Ax=b has no solution." && __LINE__);
+    //assert((kai_b_fil).isApprox(Bii.inverse()*kai_loc_fil, 1e-5) && "Ax=b has no solution." && __LINE__);
 
     //transformation
     const float incrx = kai_loc_fil(0)/fps;
