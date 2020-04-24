@@ -238,6 +238,7 @@ public:
     double                      velocity_fallback_x;
     double                      velocity_fallback_y;
     double                      velocity_fallback_angular;
+    bool                        counter_clockwise;
 
     //Subscriptions & Publishers
     ros::Subscriber laser_sub, initPose_sub;

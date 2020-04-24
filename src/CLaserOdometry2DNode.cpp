@@ -84,6 +84,7 @@ CLaserOdometry2DNode::CLaserOdometry2DNode() :
     pn.param<double>("pose_fallback/linear_velocity_threshold_x", linear_velocity_threshold_x, 1.0e+6);
     pn.param<double>("pose_fallback/linear_velocity_threshold_y", linear_velocity_threshold_y, linear_velocity_threshold_x);
     pn.param<double>("pose_fallback/angular_velocity_threshold", angular_velocity_threshold, 1.0e+6);
+    pn.param<bool>("counter_clockwise", counter_clockwise, true);
 
     //Publishers and Subscribers
     //--------------------------
@@ -267,8 +268,14 @@ void CLaserOdometry2DNode::publish()
     odom.header.stamp = ros::Time::now();
     odom.header.frame_id = odom_frame_id;
     //set the position
-    odom.pose.pose.position.x = robot_pose_.translation()(0);
-    odom.pose.pose.position.y = robot_pose_.translation()(1);
+    float counter_clockwise_multiplier;
+    
+    if(counter_clockwise) counter_clockwise_multiplier = 1.0;
+    else counter_clockwise_multiplier = -1.0;
+    
+    odom.pose.pose.position.x = counter_clockwise_multiplier * robot_pose_.translation()(0);
+    odom.pose.pose.position.y = counter_clockwise_multiplier * robot_pose_.translation()(1);
+    
     odom.pose.pose.position.z = 0.0;
     odom.pose.pose.orientation = tf::createQuaternionMsgFromYaw(rf2o::getYaw(robot_pose_.rotation()));
     odom.child_frame_id = base_frame_id;
