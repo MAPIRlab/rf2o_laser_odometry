@@ -1,4 +1,6 @@
-# rf2o_laser_odometry
+# Laser Odometry
+
+This is the fork project of [`rf2o_laser_odometry`](https://github.com/MAPIRlab/rf2o_laser_odometry)
 
 > Estimation of 2D odometry based on planar laser scans. Useful for mobile robots with innacurate base odometry. http://mapir.isa.uma.es/work/rf2o For full description of the algorithm, please refer to: **Planar Odometry from a Radial Laser Scanner. A Range Flow-based Approach. ICRA 2016**
 
