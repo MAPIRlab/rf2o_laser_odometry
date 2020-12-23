@@ -16,7 +16,6 @@ def generate_launch_description():
 
     return LaunchDescription([
 
-            # if we don't use camera:
             Node(
                 package='rf2o_laser_odometry',
                 executable='rf2o_laser_odometry_node',
