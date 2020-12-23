@@ -75,8 +75,7 @@ void CLaserOdometry2D::init(const sensor_msgs::msg::LaserScan& scan,
   robot_initial_pose.translation()(0) = initial_robot_pose.position.x;
   robot_initial_pose.translation()(1) = initial_robot_pose.position.y;
 
-  RCLCPP_INFO_STREAM(get_logger(), "[rf2o] Setting origin at:\n"
-                       << robot_initial_pose.matrix());
+  //RCLCPP_INFO_STREAM(get_logger(), "[rf2o] Setting origin at:\n"<< robot_initial_pose.matrix());
 
   //Set the initial pose
   laser_pose_    = robot_initial_pose * laser_pose_on_robot_;
@@ -253,7 +252,7 @@ bool CLaserOdometry2D::odometryCalculation(const sensor_msgs::msg::LaserScan& sc
   auto m_runtime = get_clock()->now() - start;
 
   RCLCPP_INFO(get_logger(), "[rf2o] execution time (ms): %f",
-                m_runtime.nanoseconds()*double(1000));
+                m_runtime.seconds()*double(1000));
 
   //Update poses
   PoseUpdate();
@@ -717,7 +716,7 @@ void CLaserOdometry2D::solveSystemNonLinear()
   cov_odo = (1.f/float(num_valid_range-3))*AtA.inverse()*res.squaredNorm();
   kai_loc_level_ = Var;
 
-  RCLCPP_INFO_STREAM(get_logger(), "[rf2o] COV_ODO:\n" << cov_odo);
+  //RCLCPP_INFO_STREAM(get_logger(), "[rf2o] COV_ODO:\n" << cov_odo);
 }
 
 void CLaserOdometry2D::Reset(const Pose3d& ini_pose/*, CObservation2DRangeScan scan*/)
@@ -952,8 +951,7 @@ void CLaserOdometry2D::PoseUpdate()
   // last_scan -> the last scan received
   // last_odom_time -> The time of the previous scan lasser used to estimate the pose
   //-------------------------------------------------------------------------------------
-  double time_inc_sec = (current_scan_time - last_odom_time).nanoseconds();
-  RCLCPP_INFO(get_logger(), "sec:%f , nsec:%f",(current_scan_time - last_odom_time).seconds(),(current_scan_time - last_odom_time).nanoseconds());
+  double time_inc_sec = (current_scan_time - last_odom_time).seconds();
   last_odom_time = current_scan_time;
   lin_speed = acu_trans(0,2) / time_inc_sec;
   //double lin_speed = sqrt( mrpt::math::square(robot_oldpose.x()-robot_pose.x()) + mrpt::math::square(robot_oldpose.y()-robot_pose.y()) )/time_inc_sec;
