@@ -85,12 +85,12 @@ CLaserOdometry2DNode::CLaserOdometry2DNode(): Node("CLaserOdometry2DNode")
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*buffer_);
   odom_broadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(this);
   odom_pub  = this->create_publisher<nav_msgs::msg::Odometry>(odom_topic, 5);
-  laser_sub = this->create_subscription<sensor_msgs::msg::LaserScan>(laser_scan_topic,rclcpp::QoS(rclcpp::KeepLast(1)),
+  laser_sub = this->create_subscription<sensor_msgs::msg::LaserScan>(laser_scan_topic,rclcpp::QoS(rclcpp::KeepLast(1)).best_effort().durability_volatile(),
       std::bind(&CLaserOdometry2DNode::LaserCallBack, this, std::placeholders::_1));
   //init pose??
   if (init_pose_from_topic != "")
   {
-    initPose_sub = this->create_subscription<nav_msgs::msg::Odometry>(init_pose_from_topic,rclcpp::QoS(rclcpp::KeepLast(1)),
+    initPose_sub = this->create_subscription<nav_msgs::msg::Odometry>(init_pose_from_topic,rclcpp::QoS(rclcpp::KeepLast(1)).best_effort().durability_volatile(),
         std::bind(&CLaserOdometry2DNode::initPoseCallBack, this, std::placeholders::_1));
     GT_pose_initialized  = false;
   }
@@ -159,6 +159,7 @@ bool CLaserOdometry2DNode::scan_available()
 
 void CLaserOdometry2DNode::process()
 {
+
   if( rf2o_ref.is_initialized() && scan_available() )
   {
     //Process odometry estimation
@@ -185,7 +186,7 @@ void CLaserOdometry2DNode::LaserCallBack(const sensor_msgs::msg::LaserScan::Shar
     rf2o_ref.current_scan_time = last_scan.header.stamp;
 
     //Initialize module on first scan
-    if (!rf2o_ref.first_laser_scan)
+    if (rf2o_ref.first_laser_scan == false)
     {
       //copy laser scan to internal variable
       for (unsigned int i = 0; i < rf2o_ref.width; i++)
