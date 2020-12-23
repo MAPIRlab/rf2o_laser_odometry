@@ -15,23 +15,17 @@
   <author email="jgmonroy@uma.es"> Javier G. Monroy</author>
   <license>GPL v3</license> 
 
-  <buildtool_depend>catkin</buildtool_depend>
-
-  <build_depend>nav_msgs</build_depend>
-  <build_depend>roscpp</build_depend>
-  <build_depend>sensor_msgs</build_depend>
-  <build_depend>std_msgs</build_depend>
-  <build_depend>tf</build_depend>
-  <build_depend>cmake_modules</build_depend>   <!-- A common repository for CMake Modules which are not distributed with CMake but are commonly used by ROS packages. -->
-                                               <!-- https://github.com/ros/cmake_modules/blob/0.3-devel/README.md -->
-  <build_depend>eigen</build_depend>
-
-  <run_depend>nav_msgs</run_depend>
-  <run_depend>roscpp</run_depend>
-  <run_depend>sensor_msgs</run_depend>
-  <run_depend>std_msgs</run_depend>
-  <run_depend>tf</run_depend>
-  <run_depend>cmake_modules</run_depend>   <!-- For aditional dependencies such as Eigen -->
-  <run_depend>eigen</run_depend>
-
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>geometry_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>  
+  <depend>eigen</depend>
+  <depend>cmake_modules</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tf2_geometry_msgs</depend>
+ <export>
+    <build_type>ament_cmake</build_type>
+  </export>
 </package>
