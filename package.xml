@@ -1,8 +1,7 @@
 <?xml version="1.0"?>
 <package>
-
   <name>rf2o_laser_odometry</name>
-  <version>1.0.0</version>
+  <version>0.1.0</version>
   <description>
     Estimation of 2D odometry based on planar laser scans. Useful for mobile robots with innacurate base odometry.
     For full description of the algorithm, please refer to:
@@ -16,16 +15,25 @@
   <license>GPL v3</license> 
 
   <buildtool_depend>ament_cmake</buildtool_depend>
-  <depend>geometry_msgs</depend>
-  <depend>rclcpp</depend>
-  <depend>std_msgs</depend>
-  <depend>tf2</depend>
-  <depend>tf2_ros</depend>  
-  <depend>eigen</depend>
-  <depend>cmake_modules</depend>
-  <depend>sensor_msgs</depend>
-  <depend>tf2_geometry_msgs</depend>
- <export>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>rclcpp</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>tf2</build_depend>
+  <build_depend>tf2_ros</build_depend>  
+  <build_depend>eigen</build_depend>
+  <build_depend>cmake_modules</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>tf2_geometry_msgs</build_depend>
+  <run_depend>geometry_msgs</run_depend>
+  <run_depend>rclcpp</run_depend>
+  <run_depend>std_msgs</run_depend>
+  <run_depend>tf2</run_depend>
+  <run_depend>tf2_ros</run_depend>  
+  <run_depend>eigen</run_depend>
+  <run_depend>cmake_modules</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>tf2_geometry_msgs</run_depend>
+  <export>
     <build_type>ament_cmake</build_type>
   </export>
 </package>

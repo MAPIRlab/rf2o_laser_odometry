@@ -24,9 +24,13 @@ find_package(nav_msgs REQUIRED)
 find_package(Boost REQUIRED)
 find_package(Eigen3 REQUIRED)
 
+set(EXECUTABLE_NAME "rf2o_laser_odometry_node")
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
+add_executable(${EXECUTABLE_NAME} 
+    src/CLaserOdometry2DNode.cpp
+    src/CLaserOdometry2D.cpp)
 
 include_directories(
   include include/
@@ -48,8 +52,7 @@ set(DEPENDENCIES
   "sensor_msgs"
   "nav_msgs"
 )
-add_executable(rf2o_laser_odometry_node src/CLaserOdometry2DNode.cpp src/CLaserOdometry2D.cpp)
-ament_target_dependencies(rf2o_laser_odometry_node ${DEPENDENCIES})
+ament_target_dependencies(${EXECUTABLE_NAME} ${DEPENDENCIES})
 
 ## Declare a cpp library
 add_library(${PROJECT_NAME} src/CLaserOdometry2D.cpp)
@@ -57,7 +60,12 @@ add_library(${PROJECT_NAME} src/CLaserOdometry2D.cpp)
 ## Declare a cpp executable
 ament_target_dependencies(${PROJECT_NAME} ${DEPENDENCIES})
 
+install(TARGETS ${EXECUTABLE_NAME}
+  DESTINATION lib/${PROJECT_NAME})
+
 install(
   DIRECTORY launch  
   DESTINATION share/${PROJECT_NAME})
+
+ament_package()
 
