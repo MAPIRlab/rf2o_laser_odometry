@@ -24,7 +24,7 @@ def generate_launch_description():
                 parameters=[{
                     'laser_scan_topic' : '/scan',
                     'odom_topic' : '/odom_rf2o',
-                    'publish_tf' : False,
+                    'publish_tf' : True,
                     'base_frame_id' : 'base_footprint',
                     'odom_frame_id' : 'odom',
                     'init_pose_from_topic' : '',
