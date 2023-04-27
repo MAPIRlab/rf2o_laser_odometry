@@ -24,14 +24,15 @@
 #include <numeric>
 
 // ROS headers
-#include <ros/ros.h>
-#include <nav_msgs/Odometry.h>
-#include <sensor_msgs/LaserScan.h>
-
+#include <rclcpp/rclcpp.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#include <geometry_msgs/msg/quaternion.hpp>
+#include <sensor_msgs/msg/laser_scan.hpp>
+#include <geometry_msgs/msg/pose.hpp>
 // Eigen headers
-#include <Eigen/Dense>
-#include <Eigen/Geometry>
-#include <unsupported/Eigen/MatrixFunctions>
+#include <eigen3/Eigen/Dense>
+#include <eigen3/Eigen/Geometry>
+#include <eigen3/unsupported/Eigen/MatrixFunctions>
 
 namespace rf2o {
 
@@ -63,26 +64,25 @@ inline Eigen::Matrix<T, 3, 3> matrixYaw(const T yaw)
   return matrixRollPitchYaw<T>(0, 0, yaw);
 }
 
-class CLaserOdometry2D
+using Scalar = float;
+
+using Pose2d = Eigen::Isometry2d;
+using Pose3d = Eigen::Isometry3d;
+using MatrixS31 = Eigen::Matrix<Scalar, 3, 1>;
+using IncrementCov = Eigen::Matrix<Scalar, 3, 3>;
+
+class CLaserOdometry2D: public rclcpp::Node
 {
 public:
 
-  using Scalar = float;
-
-  using Pose2d = Eigen::Isometry2d;
-  using Pose3d = Eigen::Isometry3d;
-  using MatrixS31 = Eigen::Matrix<Scalar, 3, 1>;
-  using IncrementCov = Eigen::Matrix<Scalar, 3, 3>;
-
   CLaserOdometry2D();
-  virtual ~CLaserOdometry2D() = default;
 
-  void init(const sensor_msgs::LaserScan& scan,
-            const geometry_msgs::Pose& initial_robot_pose);
+  void init(const sensor_msgs::msg::LaserScan& scan,
+            const geometry_msgs::msg::Pose& initial_robot_pose);
 
   bool is_initialized();
 
-  bool odometryCalculation(const sensor_msgs::LaserScan& scan);
+  bool odometryCalculation(const sensor_msgs::msg::LaserScan& scan);
 
   void setLaserPose(const Pose3d& laser_pose);
 
@@ -92,10 +92,8 @@ public:
 
   Pose3d& getPose();
   const Pose3d& getPose() const;
-
-protected:
-
   bool verbose, module_initialized, first_laser_scan;
+  rclcpp::Time last_odom_time, current_scan_time;
 
   // Internal Data
   std::vector<Eigen::MatrixXf> range;
@@ -140,8 +138,7 @@ protected:
 
   double lin_speed, ang_speed;
 
-  ros::WallDuration	m_runtime;
-  ros::Time last_odom_time, current_scan_time;
+  //rclcpp::wall	m_runtime;
 
   MatrixS31 kai_abs_;
   MatrixS31 kai_loc_;
