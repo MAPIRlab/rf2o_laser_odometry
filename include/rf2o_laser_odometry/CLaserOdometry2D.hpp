@@ -7,12 +7,12 @@
 *  For more information, please refer to:
 *
 *  Planar Odometry from a Radial Laser Scanner. A Range Flow-based Approach. ICRA'16.
-*  Available at: http://mapir.isa.uma.es/mapirwebsite/index.php/mapir-downloads/papers/217
+*  Available at: http://mapir.uma.es/papersrepo/2016/2016_Jaimez_ICRA_RF2O.pdf
 *
-* Maintainer: Javier G. Monroy
-* MAPIR group: http://mapir.isa.uma.es/
+** Maintainer: Javier G. Monroy
+* MAPIR group: https://mapir.isa.uma.es
 *
-* Modifications: Jeremie Deray
+* Modifications: Jeremie Deray & (see contributons on github)
 ******************************************************************************************** */
 
 #ifndef CLaserOdometry2D_H
@@ -22,7 +22,6 @@
 #include <iostream>
 #include <fstream>
 #include <numeric>
-
 // ROS headers
 #include <rclcpp/rclcpp.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -65,11 +64,11 @@ inline Eigen::Matrix<T, 3, 3> matrixYaw(const T yaw)
 }
 
 using Scalar = float;
-
 using Pose2d = Eigen::Isometry2d;
 using Pose3d = Eigen::Isometry3d;
 using MatrixS31 = Eigen::Matrix<Scalar, 3, 1>;
 using IncrementCov = Eigen::Matrix<Scalar, 3, 3>;
+
 
 class CLaserOdometry2D: public rclcpp::Node
 {
