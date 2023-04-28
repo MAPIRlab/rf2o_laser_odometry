@@ -76,7 +76,8 @@ CLaserOdometry2DNode::CLaserOdometry2DNode(): Node("CLaserOdometry2DNode")
 
 
 /**
- * LaserCallBack stores the last scan from the 2D lidar
+ * Keeps the last scan from the 2D lidar to be latter processed
+ * On the first laser scan, the node is initialized.
 */
 void CLaserOdometry2DNode::LaserCallBack(const sensor_msgs::msg::LaserScan::SharedPtr new_scan)
 {
@@ -88,7 +89,7 @@ void CLaserOdometry2DNode::LaserCallBack(const sensor_msgs::msg::LaserScan::Shar
     
     if (rf2o_ref.first_laser_scan == false)
     {
-      // copy laser range data to internal variable
+      // copy laser range data to rf2o internal variable
       for (unsigned int i = 0; i < rf2o_ref.width; i++)
         rf2o_ref.range_wf(i) = new_scan->ranges[i];
       // inform of new scan available
@@ -154,35 +155,40 @@ bool CLaserOdometry2DNode::scan_available()
   return new_scan_available;
 }
 
+
 /**
  * Process the last scans to estimate the current odometry
 */
 void CLaserOdometry2DNode::process()
 {
-
+  // Do only run when a new scan is ready 
   if( rf2o_ref.is_initialized() && scan_available() )
   {
-    //Process odometry estimation
+    // Process odometry estimation
     rf2o_ref.odometryCalculation(last_scan);
+
+    // Publish odometry over ROS2 (tf/topic)
     publish();
-    new_scan_available = false; //avoids the possibility to run twice on the same laser scan
+
+    // Do not run on the same data!
+    new_scan_available = false;
   }
   else
   {
-    RCLCPP_WARN(get_logger(), "Waiting for laser_scans....") ;
+    // This is a warning. We depend on laser scans, so no meaning running faster than scan freq.
+    RCLCPP_WARN(get_logger(), "Waiting for laser_scans....");
   }
 }
 
 
-//-----------------------------------------------------------------------------------
-//                                   CALLBACKS
-//-----------------------------------------------------------------------------------
-
-
-
+/**
+ * This function is used to initialize the robot pose before estimating its odometry.
+ * By default the odometry will start from pose_0, but when comparing different methods
+ * it may be necessary to start from a different pose.
+*/
 void CLaserOdometry2DNode::initPoseCallBack(const nav_msgs::msg::Odometry::SharedPtr new_initPose)
 {
-  //Initialize module on first GT pose. Else do Nothing!
+  // Initialize module on first GT pose. Else do Nothing!
   if (!GT_pose_initialized)
   {
     initial_robot_pose = *new_initPose;
@@ -190,21 +196,22 @@ void CLaserOdometry2DNode::initPoseCallBack(const nav_msgs::msg::Odometry::Share
   }
 }
 
+
+/**
+ * Publish current odocmetry estimation over ROS
+ * According to the node parameters it will publish over tf and/or especified topic
+*/
 void CLaserOdometry2DNode::publish()
 {
-  //first, we'll publish the odometry over tf
-  //---------------------------------------
-
-  //next, we'll publish the odometry message over ROS
-  //-------------------------------------------------
-  
-  RCLCPP_DEBUG(get_logger(), "[rf2o] Publishing Odom Topic");
+  // 1. publish odom as a topic (no harm!)
+  RCLCPP_DEBUG(get_logger(), "Publishing odom over topic:[%s]", odom_topic.c_str());
   tf2::Quaternion tf_quaternion;
   tf_quaternion.setRPY(0.0, 0.0, rf2o::getYaw(rf2o_ref.robot_pose_.rotation()));
   geometry_msgs::msg::Quaternion quaternion = tf2::toMsg(tf_quaternion);
+  
+  // compose odom msg
   nav_msgs::msg::Odometry odom;
-
-  odom.header.stamp = rf2o_ref.last_odom_time;
+  odom.header.stamp = rf2o_ref.last_odom_time;    // the time of the last scan used!
   odom.header.frame_id = odom_frame_id;
   //set the position
   odom.pose.pose.position.x = rf2o_ref.robot_pose_.translation()(0);
@@ -219,11 +226,12 @@ void CLaserOdometry2DNode::publish()
   //publish the message
   odom_pub->publish(odom);
 
+  // 2. publish over tf? (one one node should publish this transform!)
   if (publish_tf)
   {
-    RCLCPP_DEBUG(get_logger(), "[rf2o] Publishing TF: [base_link] to [odom]");
+    RCLCPP_DEBUG(get_logger(), "Publishing TF: [base_link] to [odom]");
     geometry_msgs::msg::TransformStamped odom_trans;
-    odom_trans.header.stamp = rf2o_ref.last_odom_time;
+    odom_trans.header.stamp = rf2o_ref.last_odom_time;    // the time of the last scan used!
     odom_trans.header.frame_id = odom_frame_id;
     odom_trans.child_frame_id = base_frame_id;
     odom_trans.transform.translation.x = rf2o_ref.robot_pose_.translation()(0);
@@ -233,7 +241,6 @@ void CLaserOdometry2DNode::publish()
     //send the transform
     odom_broadcaster->sendTransform(odom_trans);
   }
-
 }
 
 } /* namespace rf2o */
@@ -258,5 +265,4 @@ int main(int argc, char** argv)
   }
 
   return 0;
-
 }
