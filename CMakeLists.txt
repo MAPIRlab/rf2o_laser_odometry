@@ -38,8 +38,7 @@ include_directories(
   include include/
 )
 
-include_directories(
-  
+include_directories(  
   ${Boost_INCLUDE_DIRS}
   ##${EIGEN3_INCLUDE_DIRS}
 )
