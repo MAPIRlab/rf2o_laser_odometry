@@ -39,58 +39,66 @@ CLaserOdometry2D::CLaserOdometry2D() :
   
 }
 
+
+/**
+ * Sets the laser pose with respect the robot base_link, and its inverse
+ * @param laser_pose is the transform between laser_frame_id and base_link
+*/
 void CLaserOdometry2D::setLaserPose(const Pose3d& laser_pose)
 {
-  //Set laser pose on the robot
-
   laser_pose_on_robot_     = laser_pose;
   laser_pose_on_robot_inv_ = laser_pose_on_robot_.inverse();
 }
+
 
 bool CLaserOdometry2D::is_initialized()
 {
   return module_initialized;
 }
 
+
+/**
+ * On the first laser scan, gets its parameters and initialize the node
+ * 
+*/
 void CLaserOdometry2D::init(const sensor_msgs::msg::LaserScan& scan,
                             const geometry_msgs::msg::Pose& initial_robot_pose)
 {
-  //Got an initial scan laser, obtain its parametes
-  RCLCPP_INFO(get_logger(), "[rf2o] Got first Laser Scan .... Configuring node");
-
-  width = scan.ranges.size();    // Num of samples (size) of the scan laser
-
-  cols = width;						// Max resolution. Should be similar to the width parameter
-  fovh = std::abs(scan.angle_max - scan.angle_min); // Horizontal Laser's FOV
+  // Obtain laser parametes
+  RCLCPP_INFO(get_logger(), "Got first Laser Scan .... Configuring node");
+  width = scan.ranges.size();         // Num of samples (size) of the scan laser
+  cols = width;						            // Max resolution. Should be similar to the width parameter
+  fovh = std::abs(scan.angle_max - scan.angle_min);  // Horizontal Laser's FOV
   ctf_levels = 5;                     // Coarse-to-Fine levels
-  iter_irls  = 5;                      //Num iterations to solve iterative reweighted least squares
+  iter_irls  = 5;                     // Num iterations to solve iterative reweighted least squares
 
+  // Set the robot initial pose in the "map" frame_id
+  // Odometry estimation will carry out from this initial pose
   Pose3d robot_initial_pose = Pose3d::Identity();
-
   robot_initial_pose = Eigen::Quaterniond(initial_robot_pose.orientation.w,
                                           initial_robot_pose.orientation.x,
                                           initial_robot_pose.orientation.y,
                                           initial_robot_pose.orientation.z);
-
   robot_initial_pose.translation()(0) = initial_robot_pose.position.x;
   robot_initial_pose.translation()(1) = initial_robot_pose.position.y;
 
   //RCLCPP_INFO_STREAM(get_logger(), "[rf2o] Setting origin at:\n"<< robot_initial_pose.matrix());
 
-  //Set the initial pose
+  // Get the initial laser pose assuming laser is fixed with respect the base_link
   laser_pose_    = robot_initial_pose * laser_pose_on_robot_;
   laser_oldpose_ = laser_oldpose_;
 
-  // Init module (internal)
-  //------------------------
+
+  // Init rf2o module (internal)
+  //-----------------------------
   range_wf = Eigen::MatrixXf::Constant(1, width, 1);
 
-  //Resize vectors according to levels
+  // Resize vectors according to coarse2fine levels
   transformations.resize(ctf_levels);
   for (unsigned int i = 0; i < ctf_levels; i++)
     transformations[i].resize(3, 3);
 
-  //Resize pyramid
+  // Resize pyramid
   unsigned int s, cols_i;
   const unsigned int pyr_levels = std::round(std::log2(round(float(width) / float(cols)))) + ctf_levels;
   range.resize(pyr_levels);
@@ -158,6 +166,7 @@ void CLaserOdometry2D::init(const sensor_msgs::msg::LaserScan& scan,
   module_initialized = true;
   last_odom_time = scan.header.stamp;
 }
+
 
 const Pose3d& CLaserOdometry2D::getIncrement() const
 {

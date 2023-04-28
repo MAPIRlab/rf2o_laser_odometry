@@ -25,13 +25,13 @@ CLaserOdometry2DNode::CLaserOdometry2DNode(): Node("CLaserOdometry2DNode")
 
   // Read Parameters
   //----------------
-  this->declare_parameter<std::string>("laser_scan_topic", "/laser_scan");
+  this->declare_parameter<std::string>("laser_scan_topic", "/scan");
   this->get_parameter("laser_scan_topic", laser_scan_topic);
   this->declare_parameter<std::string>("odom_topic", "/odom_rf2o");
   this->get_parameter("odom_topic", odom_topic);
-  this->declare_parameter<std::string>("base_frame_id", "/base_link");
+  this->declare_parameter<std::string>("base_frame_id", "base_link");
   this->get_parameter("base_frame_id", base_frame_id);
-  this->declare_parameter<std::string>("odom_frame_id", "/odom");
+  this->declare_parameter<std::string>("odom_frame_id", "odom");
   this->get_parameter("odom_frame_id", odom_frame_id);
   this->declare_parameter<bool>("publish_tf", true);
   this->get_parameter("publish_tf", publish_tf);
@@ -49,7 +49,7 @@ CLaserOdometry2DNode::CLaserOdometry2DNode(): Node("CLaserOdometry2DNode")
   laser_sub = this->create_subscription<sensor_msgs::msg::LaserScan>(laser_scan_topic,rclcpp::QoS(rclcpp::KeepLast(1)).best_effort().durability_volatile(),
       std::bind(&CLaserOdometry2DNode::LaserCallBack, this, std::placeholders::_1));
   
-  // Initialize pose?
+  // Initialize pose
   if (init_pose_from_topic != "")
   {
     initPose_sub = this->create_subscription<nav_msgs::msg::Odometry>(init_pose_from_topic,rclcpp::QoS(rclcpp::KeepLast(1)).best_effort().durability_volatile(),
@@ -69,20 +69,51 @@ CLaserOdometry2DNode::CLaserOdometry2DNode(): Node("CLaserOdometry2DNode")
     initial_robot_pose.pose.pose.orientation.z = 0;
   }
 
-
-  //Init variables
+  // Init variables
   rf2o_ref.module_initialized = false;
   rf2o_ref.first_laser_scan   = true;
 }
 
 
-bool CLaserOdometry2DNode::setLaserPoseFromTf()
+/**
+ * LaserCallBack stores the last scan from the 2D lidar
+*/
+void CLaserOdometry2DNode::LaserCallBack(const sensor_msgs::msg::LaserScan::SharedPtr new_scan)
 {
-  bool retrieved = false;
+  if (GT_pose_initialized)
+  {
+    // Keep in memory the last received laser_scan
+    last_scan = *new_scan;
+    rf2o_ref.current_scan_time = last_scan.header.stamp;
+    
+    if (rf2o_ref.first_laser_scan == false)
+    {
+      // copy laser range data to internal variable
+      for (unsigned int i = 0; i < rf2o_ref.width; i++)
+        rf2o_ref.range_wf(i) = new_scan->ranges[i];
+      // inform of new scan available
+      new_scan_available = true;
+    }
+    else
+    {
+      // Initialize module on first scan (from laser params)
+      setLaserPoseFromTf();
+      rf2o_ref.init(last_scan, initial_robot_pose.pose.pose);
+      rf2o_ref.first_laser_scan = false;
+    }
+  }
+}
 
-  // Set laser pose on the robot (through tF)
-  // This allow estimation of the odometry with respect to the robot base reference system.
+
+/** 
+   * Gets the laser pose with respect the base_link (through TF)
+   * This allow estimation of the odometry with respect to the robot base reference system.
+   */
+bool CLaserOdometry2DNode::setLaserPoseFromTf()
+{  
+  bool retrieved = false;  
   geometry_msgs::msg::TransformStamped tf_laser;
+
   try
   {
     tf_laser = buffer_->lookupTransform(base_frame_id, last_scan.header.frame_id, tf2::TimePointZero);
@@ -94,7 +125,7 @@ bool CLaserOdometry2DNode::setLaserPoseFromTf()
     retrieved = false;
   }
 
-  //TF:transform -> Eigen::Isometry3d
+  // Keep this transform as Eigen Matrix3d
   tf2::Transform transform;
   tf2::convert(tf_laser.transform, transform);
   const tf2::Matrix3x3 &basis = transform.getBasis();
@@ -111,16 +142,21 @@ bool CLaserOdometry2DNode::setLaserPoseFromTf()
   laser_tf.translation()(1) = t[1];
   laser_tf.translation()(2) = t[2];
 
+  // Sets this transform in rf2o 
   rf2o_ref.setLaserPose(laser_tf);
 
   return retrieved;
 }
+
 
 bool CLaserOdometry2DNode::scan_available()
 {
   return new_scan_available;
 }
 
+/**
+ * Process the last scans to estimate the current odometry
+*/
 void CLaserOdometry2DNode::process()
 {
 
@@ -137,34 +173,12 @@ void CLaserOdometry2DNode::process()
   }
 }
 
+
 //-----------------------------------------------------------------------------------
 //                                   CALLBACKS
 //-----------------------------------------------------------------------------------
 
-void CLaserOdometry2DNode::LaserCallBack(const sensor_msgs::msg::LaserScan::SharedPtr new_scan)
-{
-  if (GT_pose_initialized)
-  {
-    //Keep in memory the last received laser_scan
-    last_scan = *new_scan;
-    rf2o_ref.current_scan_time = last_scan.header.stamp;
 
-    //Initialize module on first scan
-    if (rf2o_ref.first_laser_scan == false)
-    {
-      //copy laser scan to internal variable
-      for (unsigned int i = 0; i < rf2o_ref.width; i++)
-        rf2o_ref.range_wf(i) = new_scan->ranges[i];
-      new_scan_available = true;
-    }
-    else
-    {
-      setLaserPoseFromTf();
-      rf2o_ref.init(last_scan, initial_robot_pose.pose.pose);
-      rf2o_ref.first_laser_scan = false;
-    }
-  }
-}
 
 void CLaserOdometry2DNode::initPoseCallBack(const nav_msgs::msg::Odometry::SharedPtr new_initPose)
 {
@@ -224,19 +238,25 @@ void CLaserOdometry2DNode::publish()
 
 } /* namespace rf2o */
 
+
 //-----------------------------------------------------------------------------------
 //                                   MAIN
 //-----------------------------------------------------------------------------------
 int main(int argc, char** argv)
 {
   rclcpp::init(argc, argv);
-  auto myLaserOdomNode = std::make_shared<rf2o::CLaserOdometry2DNode>() ;
+  auto myLaserOdomNode = std::make_shared<rf2o::CLaserOdometry2DNode>();
+
+  // set desired loop rate
   rclcpp::Rate rate(myLaserOdomNode->freq);
-  while (rclcpp::ok()){
-      myLaserOdomNode->process();
+
+  // Loop
+  while (rclcpp::ok()){ 
       rclcpp::spin_some(myLaserOdomNode);
+      myLaserOdomNode->process();
       rate.sleep();
   }
+
   return 0;
 
 }
